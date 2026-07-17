@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Bot, Check, FileDown, FileSpreadsheet, Fingerprint, Radar, ShieldCheck, Sparkles, Zap } from "lucide-react";
+import { PainPointSection } from "@/components/PainPointSection";
 
 const features = [
   { icon: FileSpreadsheet, title: "Analisis massal", copy: "Upload CSV atau Excel dan periksa hingga 50 transaksi sekaligus." },
@@ -28,6 +29,8 @@ export default function Home() {
       </section>
 
       <section className="stats-strip"><div><strong>≤ 50</strong><span>transaksi per batch</span></div><div><strong>3</strong><span>tingkat risiko yang jelas</span></div><div><strong>24/7</strong><span>siap membantu operasional</span></div></section>
+
+      <PainPointSection />
 
       <section className="section" id="fitur"><div className="section-heading"><div><span className="eyebrow">FITUR INTI</span><h2>Bukan sekadar skor. <em>Insight untuk bertindak.</em></h2></div><p>Dibuat untuk pemilik toko dan tim operasional yang tidak perlu memahami istilah teknis.</p></div><div className="feature-grid">{features.map(({ icon: Icon, title, copy }, index) => <article className="neon-card feature-card" key={title}><span>0{index + 1}</span><Icon /><h3>{title}</h3><p>{copy}</p></article>)}</div></section>
 
