@@ -10,6 +10,12 @@ const attempts = new Map<string, { count: number; resetAt: number }>();
 const WINDOW_MS = 60_000;
 const MAX_REQUESTS = 8;
 
+function labelFromScore(score: number): AnalysisResult["label"] {
+  if (score >= 70) return "TERDETEKSI";
+  if (score >= 40) return "WASPADA";
+  return "AMAN";
+}
+
 function isRateLimited(ip: string) {
   const now = Date.now();
   const entry = attempts.get(ip);
@@ -52,10 +58,14 @@ export async function POST(request: NextRequest) {
     const results: AnalysisResult[] = data.results.map((item) => ({
       transaction: transactionMap.get(item.id)!,
       riskScore: item.riskScore,
-      label: item.label,
+      label: labelFromScore(item.riskScore),
       reasoning: item.reasoning,
       recommendation: item.recommendation,
     }));
+
+    const overallRisk = Math.round(
+      results.reduce((total, item) => total + item.riskScore, 0) / results.length,
+    );
 
     const response: BatchAnalysis = {
       results,
@@ -64,7 +74,7 @@ export async function POST(request: NextRequest) {
         aman: results.filter((item) => item.label === "AMAN").length,
         waspada: results.filter((item) => item.label === "WASPADA").length,
         terdeteksi: results.filter((item) => item.label === "TERDETEKSI").length,
-        overallRisk: data.summary.overallRisk,
+        overallRisk,
         aiInsight: data.summary.aiInsight,
       },
       meta: { model, analyzedAt: new Date().toISOString() },

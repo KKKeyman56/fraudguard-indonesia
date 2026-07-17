@@ -84,8 +84,15 @@ export async function analyzeWithGroq(transactions: Transaction[]): Promise<{ da
 
   const parsed = JSON.parse(content) as unknown;
   const validated = aiResponseSchema.parse(parsed);
-  const ids = new Set(transactions.map((item) => item.id));
-  if (validated.results.length !== transactions.length || validated.results.some((item) => !ids.has(item.id))) {
+  const inputIds = new Set(transactions.map((item) => item.id));
+  const resultIds = new Set(validated.results.map((item) => item.id));
+  const hasExactIds =
+    inputIds.size === transactions.length &&
+    resultIds.size === validated.results.length &&
+    inputIds.size === resultIds.size &&
+    [...inputIds].every((id) => resultIds.has(id));
+
+  if (!hasExactIds) {
     throw new Error("GROQ_RESULT_MISMATCH");
   }
 
