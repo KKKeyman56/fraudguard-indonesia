@@ -13,7 +13,7 @@ const links = [
   { href: "/report", label: "Laporan" },
 ];
 
-export function AppHeader({ userEmail }: { userEmail?: string | null }) {
+export function AppHeader({ userEmail, isAdmin = false }: { userEmail?: string | null; isAdmin?: boolean }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   return (
@@ -31,6 +31,7 @@ export function AppHeader({ userEmail }: { userEmail?: string | null }) {
               {link.label}
             </Link>
           ))}
+          {isAdmin && <Link href="/admin" onClick={() => setOpen(false)} className={pathname.startsWith("/admin") ? "active" : ""}>Admin</Link>}
           {userEmail ? (
             <form action="/auth/signout" method="post" className="nav-account">
               <span title={userEmail}>{userEmail}</span>
