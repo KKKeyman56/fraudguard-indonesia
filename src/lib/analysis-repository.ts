@@ -11,6 +11,36 @@ type StoredRun = {
   created_at: string;
 };
 
+type StoredHistoryRun = StoredRun & {
+  source: string | null;
+};
+
+type StoredHistoryTransaction = {
+  analysis_id: string;
+  status: RiskLabel;
+};
+
+export type AnalysisHistoryItem = {
+  id: string;
+  overallRisk: number;
+  aiSummary: string;
+  aiModel: string;
+  source: "manual" | "file";
+  createdAt: string;
+  total: number;
+  aman: number;
+  waspada: number;
+  terdeteksi: number;
+};
+
+export type AnalysisHistoryPage = {
+  items: AnalysisHistoryItem[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+};
+
 type StoredTransaction = {
   id: string;
   input_id: string | null;
@@ -85,15 +115,18 @@ export async function persistAnalysis(userId: string, analysis: BatchAnalysis) {
   return run.id as string;
 }
 
-export async function getLatestAnalysis(userId: string): Promise<BatchAnalysis | null> {
+async function readAnalysis(userId: string, analysisId?: string): Promise<BatchAnalysis | null> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("analysis_runs")
     .select("id, overall_risk, ai_summary, ai_model, created_at")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .eq("user_id", userId);
+
+  query = analysisId
+    ? query.eq("id", analysisId)
+    : query.order("created_at", { ascending: false }).limit(1);
+
+  const { data, error } = await query.maybeSingle();
 
   if (error) throw new Error(`ANALYSIS_RUN_READ_FAILED:${error.code}`);
   if (!data) return null;
@@ -143,5 +176,84 @@ export async function getLatestAnalysis(userId: string): Promise<BatchAnalysis |
       analyzedAt: run.created_at,
       persisted: true,
     },
+  };
+}
+
+export async function getLatestAnalysis(userId: string): Promise<BatchAnalysis | null> {
+  return readAnalysis(userId);
+}
+
+export async function getAnalysisById(userId: string, analysisId: string): Promise<BatchAnalysis | null> {
+  return readAnalysis(userId, analysisId);
+}
+
+export async function listAnalysisHistory(
+  userId: string,
+  requestedPage: number,
+  pageSize = 10,
+): Promise<AnalysisHistoryPage> {
+  const supabase = await createClient();
+  const safePageSize = Math.min(Math.max(Math.trunc(pageSize), 1), 50);
+
+  const { count, error: countError } = await supabase
+    .from("analysis_runs")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId);
+
+  if (countError) throw new Error(`ANALYSIS_HISTORY_COUNT_FAILED:${countError.code}`);
+
+  const total = count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / safePageSize));
+  const page = Math.min(Math.max(Math.trunc(requestedPage) || 1, 1), totalPages);
+  const from = (page - 1) * safePageSize;
+
+  const { data, error } = await supabase
+    .from("analysis_runs")
+    .select("id, overall_risk, ai_summary, ai_model, source, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .range(from, from + safePageSize - 1);
+
+  if (error) throw new Error(`ANALYSIS_HISTORY_READ_FAILED:${error.code}`);
+
+  const runs = (data ?? []) as StoredHistoryRun[];
+  const runIds = runs.map((run) => run.id);
+  let storedTransactions: StoredHistoryTransaction[] = [];
+
+  if (runIds.length > 0) {
+    const { data: transactionData, error: transactionError } = await supabase
+      .from("transactions")
+      .select("analysis_id, status")
+      .eq("user_id", userId)
+      .in("analysis_id", runIds);
+
+    if (transactionError) throw new Error(`ANALYSIS_HISTORY_TRANSACTIONS_FAILED:${transactionError.code}`);
+    storedTransactions = (transactionData ?? []) as StoredHistoryTransaction[];
+  }
+
+  const countsByRun = new Map<string, { total: number; aman: number; waspada: number; terdeteksi: number }>();
+  for (const transaction of storedTransactions) {
+    const counts = countsByRun.get(transaction.analysis_id) ?? { total: 0, aman: 0, waspada: 0, terdeteksi: 0 };
+    counts.total += 1;
+    if (transaction.status === "AMAN") counts.aman += 1;
+    if (transaction.status === "WASPADA") counts.waspada += 1;
+    if (transaction.status === "TERDETEKSI") counts.terdeteksi += 1;
+    countsByRun.set(transaction.analysis_id, counts);
+  }
+
+  return {
+    items: runs.map((run) => ({
+      id: run.id,
+      overallRisk: run.overall_risk,
+      aiSummary: run.ai_summary || "Ringkasan AI tidak tersedia.",
+      aiModel: run.ai_model || "FraudGuard AI",
+      source: run.source === "manual" ? "manual" : "file",
+      createdAt: run.created_at,
+      ...(countsByRun.get(run.id) ?? { total: 0, aman: 0, waspada: 0, terdeteksi: 0 }),
+    })),
+    page,
+    pageSize: safePageSize,
+    total,
+    totalPages,
   };
 }
