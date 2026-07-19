@@ -29,8 +29,11 @@ export interface BatchAnalysis {
     aiInsight: string;
   };
   meta?: {
+    analysisId?: string;
     model: string;
     analyzedAt: string;
+    persisted?: boolean;
+    persistenceWarning?: string;
   };
 }
 

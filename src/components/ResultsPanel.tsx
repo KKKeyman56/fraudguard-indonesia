@@ -11,6 +11,7 @@ const rupiah = new Intl.NumberFormat("id-ID", { style: "currency", currency: "ID
 export function ResultsPanel({ analysis, onReset }: { analysis: BatchAnalysis; onReset?: () => void }) {
   return (
     <section className="results-stack" aria-live="polite">
+      {analysis.meta?.persistenceWarning && <div className="alert" role="alert">{analysis.meta.persistenceWarning}</div>}
       <div className="summary-grid">
         <article className="neon-card stat-card"><span>Total transaksi</span><strong>{analysis.summary.total}</strong></article>
         <article className="neon-card stat-card safe"><span>AMAN</span><strong>{analysis.summary.aman}</strong></article>

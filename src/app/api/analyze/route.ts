@@ -3,6 +3,7 @@ import { analyzeWithGroq } from "@/lib/groq";
 import { analyzeRequestSchema } from "@/lib/schemas";
 import type { AnalysisResult, BatchAnalysis } from "@/types/transaction";
 import { getVerifiedClaims } from "@/lib/auth";
+import { persistAnalysis } from "@/lib/analysis-repository";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -87,6 +88,22 @@ export async function POST(request: NextRequest) {
       },
       meta: { model, analyzedAt: new Date().toISOString() },
     };
+
+    try {
+      response.meta = {
+        ...response.meta!,
+        analysisId: await persistAnalysis(userKey, response),
+        persisted: true,
+      };
+    } catch (persistenceError) {
+      console.error("FraudGuard persistence error", persistenceError);
+      response.meta = {
+        ...response.meta!,
+        persisted: false,
+        persistenceWarning:
+          "Analisis selesai, tetapi laporan belum tersimpan. Unduh PDF sekarang atau coba analisis kembali.",
+      };
+    }
 
     return NextResponse.json(response, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
