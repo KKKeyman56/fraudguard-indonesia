@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AppHeader } from "@/components/AppHeader";
+import { getVerifiedClaims } from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: { default: "FraudGuard — AI Deteksi Risiko Transaksi", template: "%s | FraudGuard" },
@@ -9,12 +10,19 @@ export const metadata: Metadata = {
   openGraph: { title: "FraudGuard", description: "AI penjaga transaksi UMKM Indonesia", type: "website", locale: "id_ID" },
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  let userEmail: string | null = null;
+  try {
+    const claims = await getVerifiedClaims();
+    userEmail = typeof claims?.email === "string" ? claims.email : null;
+  } catch (error) {
+    if (!(error instanceof Error) || error.message !== "SUPABASE_CONFIG_MISSING") throw error;
+  }
   return (
     <html lang="id">
       <body>
         <div className="scanlines" aria-hidden="true" />
-        <AppHeader />
+        <AppHeader userEmail={userEmail} />
         {children}
       </body>
     </html>

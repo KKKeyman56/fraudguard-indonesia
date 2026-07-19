@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, ShieldCheck, X } from "lucide-react";
+import { LogOut, Menu, ShieldCheck, X } from "lucide-react";
 import { useState } from "react";
 
 const links = [
@@ -12,7 +12,7 @@ const links = [
   { href: "/report", label: "Laporan" },
 ];
 
-export function AppHeader() {
+export function AppHeader({ userEmail }: { userEmail?: string | null }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   return (
@@ -30,7 +30,14 @@ export function AppHeader() {
               {link.label}
             </Link>
           ))}
-          <Link className="button button-small" href="/analyze" onClick={() => setOpen(false)}>Mulai Analisis</Link>
+          {userEmail ? (
+            <form action="/auth/signout" method="post" className="nav-account">
+              <span title={userEmail}>{userEmail}</span>
+              <button className="button button-small button-ghost" type="submit"><LogOut size={15} /> Keluar</button>
+            </form>
+          ) : (
+            <Link className="button button-small" href="/login" onClick={() => setOpen(false)}>Masuk / Daftar</Link>
+          )}
         </nav>
       </div>
     </header>

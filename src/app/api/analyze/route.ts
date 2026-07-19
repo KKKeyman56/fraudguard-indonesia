@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { analyzeWithGroq } from "@/lib/groq";
 import { analyzeRequestSchema } from "@/lib/schemas";
 import type { AnalysisResult, BatchAnalysis } from "@/types/transaction";
+import { getVerifiedClaims } from "@/lib/auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -28,6 +29,13 @@ function isRateLimited(ip: string) {
 }
 
 export async function POST(request: NextRequest) {
+  const claims = await getVerifiedClaims();
+  if (!claims) {
+    return NextResponse.json(
+      { error: "Silakan masuk untuk menggunakan analisis AI.", code: "UNAUTHORIZED" },
+      { status: 401 },
+    );
+  }
   const contentLength = Number(request.headers.get("content-length") || 0);
   if (contentLength > 256_000) {
     return NextResponse.json(
@@ -35,8 +43,8 @@ export async function POST(request: NextRequest) {
       { status: 413 },
     );
   }
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-  if (isRateLimited(ip)) {
+  const userKey = typeof claims.sub === "string" ? claims.sub : "unknown";
+  if (isRateLimited(userKey)) {
     return NextResponse.json(
       { error: "Terlalu banyak permintaan. Tunggu satu menit lalu coba lagi.", code: "RATE_LIMITED" },
       { status: 429 },

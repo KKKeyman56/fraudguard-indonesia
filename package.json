@@ -2,7 +2,7 @@
   "name": "fraudguard-indonesia",
   "version": "1.0.0",
   "private": true,
-  "engines": { "node": ">=20.9.0" },
+  "engines": { "node": ">=22.0.0" },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -10,6 +10,8 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@supabase/ssr": "0.12.3",
+    "@supabase/supabase-js": "2.110.7",
     "groq-sdk": "^1.3.0",
     "exceljs": "^4.4.0",
     "jspdf": "^4.2.1",
