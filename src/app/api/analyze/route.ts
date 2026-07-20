@@ -4,6 +4,7 @@ import { analyzeRequestSchema } from "@/lib/schemas";
 import type { AnalysisResult, BatchAnalysis } from "@/types/transaction";
 import { getAccountStatus, getVerifiedClaims } from "@/lib/auth";
 import { persistAnalysis } from "@/lib/analysis-repository";
+import { getAnalysisQuota } from "@/lib/billing-repository";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -65,6 +66,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Data transaksi tidak valid atau melebihi 50 baris.", code: "INVALID_INPUT" },
         { status: 400 },
+      );
+    }
+
+    let quota;
+    try {
+      quota = await getAnalysisQuota();
+    } catch (quotaError) {
+      console.error("FraudGuard quota check error", quotaError);
+      return NextResponse.json(
+        { error: "Kuota akun belum dapat diperiksa. Silakan coba lagi.", code: "QUOTA_UNAVAILABLE" },
+        { status: 503 },
+      );
+    }
+    if (quota.monthlyLimit !== null && quota.remaining === 0) {
+      return NextResponse.json(
+        {
+          error: `Kuota paket ${quota.plan.toUpperCase()} bulan ini sudah habis. Buka halaman Paket untuk melihat pilihan upgrade.`,
+          code: "QUOTA_EXCEEDED",
+        },
+        { status: 402 },
       );
     }
 

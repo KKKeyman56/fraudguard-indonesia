@@ -5,12 +5,14 @@ import { useFormStatus } from "react-dom";
 import { PauseCircle, PlayCircle, Save } from "lucide-react";
 import { manageUserAction, type ManageUserState } from "@/app/admin/users/actions";
 import type { AccountStatus, UserRole } from "@/lib/admin-repository";
+import type { SubscriptionPlan } from "@/lib/plans";
 
 type ManageUserControlsProps = {
   targetId: string;
   currentUserId: string;
   role: UserRole;
   status: AccountStatus;
+  plan: SubscriptionPlan;
   compact?: boolean;
 };
 
@@ -22,14 +24,21 @@ function SubmitButton({ label, icon }: { label: string; icon: "save" | "pause" |
   return <button className="button button-small" type="submit" disabled={pending}><Icon size={14} />{pending ? "Memproses..." : label}</button>;
 }
 
-export function ManageUserControls({ targetId, currentUserId, role, status, compact = false }: ManageUserControlsProps) {
+export function ManageUserControls({ targetId, currentUserId, role, status, plan, compact = false }: ManageUserControlsProps) {
   const [roleState, roleAction] = useActionState(manageUserAction, initialState);
   const [statusState, statusAction] = useActionState(manageUserAction, initialState);
+  const [planState, planAction] = useActionState(manageUserAction, initialState);
   const isSelf = targetId === currentUserId;
 
   if (isSelf) return <span className="admin-self-lock">Akun Anda · terkunci</span>;
 
   return <div className={`user-controls${compact ? " compact" : ""}`}>
+    <form action={planAction} className="role-form">
+      <input type="hidden" name="operation" value="plan" />
+      <input type="hidden" name="targetId" value={targetId} />
+      <label><span className="sr-only">Paket pengguna</span><select name="plan" defaultValue={plan} aria-label="Paket pengguna"><option value="free">Free</option><option value="pro">Pro</option><option value="enterprise">Enterprise</option></select></label>
+      <SubmitButton label="Simpan paket" icon="save" />
+    </form>
     <form
       action={roleAction}
       className="role-form"
@@ -62,5 +71,6 @@ export function ManageUserControls({ targetId, currentUserId, role, status, comp
     </form>
     {roleState.message && <p className={roleState.ok ? "action-success" : "action-error"} role="status">{roleState.message}</p>}
     {statusState.message && <p className={statusState.ok ? "action-success" : "action-error"} role="status">{statusState.message}</p>}
+    {planState.message && <p className={planState.ok ? "action-success" : "action-error"} role="status">{planState.message}</p>}
   </div>;
 }

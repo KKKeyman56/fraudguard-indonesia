@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import type { SubscriptionPlan } from "@/lib/plans";
 
 type RecentRunRow = { id: string; user_id: string; overall_risk: number; ai_model: string | null; source: string; created_at: string };
 export type UserRole = "user" | "admin";
@@ -18,6 +19,9 @@ type UserOverviewRow = {
   last_analysis_at: string | null;
   transaction_count: number;
   detected_count: number;
+  plan: SubscriptionPlan;
+  plan_updated_at: string;
+  monthly_analysis_count: number;
 };
 
 export type AdminUserOverview = {
@@ -31,6 +35,9 @@ export type AdminUserOverview = {
   lastAnalysisAt: string | null;
   transactionCount: number;
   detectedCount: number;
+  plan: SubscriptionPlan;
+  planUpdatedAt: string;
+  monthlyAnalysisCount: number;
 };
 
 export type AdminDashboardData = {
@@ -59,6 +66,9 @@ function mapUserOverview(row: UserOverviewRow): AdminUserOverview {
     lastAnalysisAt: row.last_analysis_at,
     transactionCount: Number(row.transaction_count),
     detectedCount: Number(row.detected_count),
+    plan: row.plan,
+    planUpdatedAt: row.plan_updated_at,
+    monthlyAnalysisCount: Number(row.monthly_analysis_count),
   };
 }
 
@@ -77,7 +87,7 @@ export async function getAdminUsers({
   const from = (safePage - 1) * pageSize;
   let request = supabase
     .from("admin_user_overview")
-    .select("id, email, role, status, suspended_at, created_at, analysis_count, last_analysis_at, transaction_count, detected_count", { count: "exact" })
+    .select("id, email, role, status, suspended_at, created_at, analysis_count, last_analysis_at, transaction_count, detected_count, plan, plan_updated_at, monthly_analysis_count", { count: "exact" })
     .order("created_at", { ascending: false })
     .range(from, from + pageSize - 1);
 
@@ -99,7 +109,7 @@ export async function getAdminUsers({
 export async function getAdminUserDetail(userId: string) {
   const supabase = await createClient();
   const [userResult, runsResult, safeResult, warningResult, detectedResult] = await Promise.all([
-    supabase.from("admin_user_overview").select("id, email, role, status, suspended_at, created_at, analysis_count, last_analysis_at, transaction_count, detected_count").eq("id", userId).maybeSingle(),
+    supabase.from("admin_user_overview").select("id, email, role, status, suspended_at, created_at, analysis_count, last_analysis_at, transaction_count, detected_count, plan, plan_updated_at, monthly_analysis_count").eq("id", userId).maybeSingle(),
     supabase.from("analysis_runs").select("id, overall_risk, ai_model, source, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(10),
     supabase.from("transactions").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "AMAN"),
     supabase.from("transactions").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "WASPADA"),

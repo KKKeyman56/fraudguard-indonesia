@@ -6,10 +6,12 @@ import { createSampleTransactions, parseTransactionFile } from "@/lib/parser";
 import { useAnalysisStore } from "@/store/analysis-store";
 import type { ApiErrorPayload, BatchAnalysis, Transaction } from "@/types/transaction";
 import { ResultsPanel } from "@/components/ResultsPanel";
+import type { AnalysisQuota } from "@/lib/billing-repository";
+import { PLAN_DETAILS } from "@/lib/plans";
 
 const rupiah = new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 });
 
-export function AnalyzeWorkspace() {
+export function AnalyzeWorkspace({ quota }: { quota: AnalysisQuota }) {
   const { transactions, analysis, setTransactions, setAnalysis, reset } = useAnalysisStore();
   const [tab, setTab] = useState<"file" | "manual">("file");
   const [loading, setLoading] = useState(false);
@@ -111,13 +113,18 @@ export function AnalyzeWorkspace() {
       </section>
 
       <aside className="neon-card queue-card">
+        <div className="quota-compact">
+          <div><span>Paket {PLAN_DETAILS[quota.plan].name}</span><strong>{quota.monthlyLimit === null ? "Tanpa batas" : `${quota.used}/${quota.monthlyLimit}`}</strong></div>
+          {quota.monthlyLimit !== null && <><div className="quota-track" aria-label={`${quota.used} dari ${quota.monthlyLimit} kuota terpakai`}><i style={{ width: `${Math.min((quota.used / quota.monthlyLimit) * 100, 100)}%` }} /></div><small>{quota.remaining} sesi tersisa bulan ini · <a href="/billing">Lihat paket</a></small></>}
+        </div>
         <div className="section-heading compact"><div><span className="eyebrow">ANTREAN</span><h2>Transaksi siap dianalisis</h2></div><strong>{transactions.length}/50</strong></div>
         {!transactions.length ? <div className="empty-state">Belum ada data. Upload file atau isi transaksi manual.</div> : (
           <div className="queue-list">{transactions.map((item) => <div className="queue-item" key={item.id}><div><strong>{item.pelanggan}</strong><span>{rupiah.format(item.nominal)} • {item.metode}</span></div><button aria-label={`Hapus ${item.pelanggan}`} onClick={() => setTransactions(transactions.filter((row) => row.id !== item.id))}><X size={16} /></button></div>)}</div>
         )}
-        <button className="button analyze-button" disabled={!transactions.length || loading || aiReady === false} onClick={() => void analyze()}>
+        <button className="button analyze-button" disabled={!transactions.length || loading || aiReady === false || quota.remaining === 0} onClick={() => void analyze()}>
           {loading ? <><LoaderCircle className="spin" size={19} /> AI sedang menganalisis...</> : <><Send size={18} /> Analisis dengan AI</>}
         </button>
+        {quota.remaining === 0 && <p className="quota-warning">Kuota bulan ini habis. Upgrade paket untuk melanjutkan analisis.</p>}
         {loading && <p className="loading-note">Biasanya selesai dalam beberapa detik. Jangan tutup halaman ini.</p>}
       </aside>
     </div>

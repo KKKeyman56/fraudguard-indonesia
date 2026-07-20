@@ -11,6 +11,7 @@ export type ManageUserState = { ok: boolean; message: string };
 const actionSchema = z.discriminatedUnion("operation", [
   z.object({ operation: z.literal("role"), targetId: z.string().uuid(), role: z.enum(["user", "admin"]) }),
   z.object({ operation: z.literal("status"), targetId: z.string().uuid(), status: z.enum(["active", "suspended"]) }),
+  z.object({ operation: z.literal("plan"), targetId: z.string().uuid(), plan: z.enum(["free", "pro", "enterprise"]) }),
 ]);
 
 export async function manageUserAction(
@@ -30,7 +31,9 @@ export async function manageUserAction(
   const supabase = await createClient();
   const changes = parsed.data.operation === "role"
     ? { role: parsed.data.role }
-    : {
+    : parsed.data.operation === "plan"
+      ? { plan: parsed.data.plan, plan_updated_at: new Date().toISOString() }
+      : {
         status: parsed.data.status,
         suspended_at: parsed.data.status === "suspended" ? new Date().toISOString() : null,
       };
@@ -49,6 +52,6 @@ export async function manageUserAction(
   revalidatePath(`/admin/users/${parsed.data.targetId}`);
   return {
     ok: true,
-    message: parsed.data.operation === "role" ? "Role pengguna diperbarui." : "Status akun diperbarui.",
+    message: parsed.data.operation === "role" ? "Role pengguna diperbarui." : parsed.data.operation === "plan" ? "Paket pengguna diperbarui." : "Status akun diperbarui.",
   };
 }

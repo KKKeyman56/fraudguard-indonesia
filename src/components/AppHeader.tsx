@@ -11,6 +11,7 @@ const links = [
   { href: "/analyze", label: "Analisis" },
   { href: "/history", label: "Riwayat" },
   { href: "/report", label: "Laporan" },
+  { href: "/billing", label: "Paket" },
 ];
 
 export function AppHeader({ userEmail, isAdmin = false }: { userEmail?: string | null; isAdmin?: boolean }) {
