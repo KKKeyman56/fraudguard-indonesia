@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Bot, Check, FileDown, FileSpreadsheet, Fingerprint, Radar, ShieldCheck, Sparkles, Zap } from "lucide-react";
+import { ArrowRight, Bot, FileDown, FileSpreadsheet, Fingerprint, Radar, ShieldCheck, Sparkles, Zap } from "lucide-react";
 import { PainPointSection } from "@/components/PainPointSection";
 
 const features = [
@@ -35,12 +35,6 @@ export default function Home() {
       <section className="section" id="fitur"><div className="section-heading"><div><span className="eyebrow">FITUR INTI</span><h2>Bukan sekadar skor. <em>Insight untuk bertindak.</em></h2></div><p>Dibuat untuk pemilik toko dan tim operasional yang tidak perlu memahami istilah teknis.</p></div><div className="feature-grid">{features.map(({ icon: Icon, title, copy }, index) => <article className="neon-card feature-card" key={title}><span>0{index + 1}</span><Icon /><h3>{title}</h3><p>{copy}</p></article>)}</div></section>
 
       <section className="section how" id="cara-kerja"><div><span className="eyebrow">CARA KERJA</span><h2>Tiga langkah untuk keputusan yang lebih aman.</h2><p>Anda tetap memegang keputusan akhir. FraudGuard memberi sinyal dan konteks agar verifikasi lebih cepat.</p><Link className="text-link" href="/analyze">Mulai sekarang <ArrowRight size={17} /></Link></div><ol><li><span>01</span><div><h3>Masukkan transaksi</h3><p>Upload file atau isi satu transaksi secara manual.</p></div></li><li><span>02</span><div><h3>AI mencari pola risiko</h3><p>Nominal, waktu, metode, kota, dan catatan dibaca bersama.</p></div></li><li><span>03</span><div><h3>Terima insight & laporan</h3><p>Periksa alasan, rekomendasi, lalu simpan laporan PDF.</p></div></li></ol></section>
-
-      <section className="section pricing" id="harga"><div className="section-heading centered"><div><span className="eyebrow">PAKET</span><h2>Mulai kecil. Naik saat bisnis tumbuh.</h2></div></div><div className="pricing-grid">
-        <article className="neon-card price-card"><h3>Gratis</h3><strong>Rp0<span>/bulan</span></strong><ul><li><Check />50 analisis per bulan</li><li><Check />Insight dasar</li><li><Check />Export PDF</li></ul><Link className="button button-ghost" href="/billing">Mulai gratis</Link></article>
-        <article className="neon-card price-card featured"><span className="badge">PALING COCOK UNTUK UMKM</span><h3>Pro</h3><strong>Rp99rb<span>/bulan</span></strong><ul><li><Check />5.000 analisis per bulan</li><li><Check />Insight AI detail</li><li><Check />Riwayat dan laporan</li></ul><Link className="button" href="/billing">Lihat paket Pro</Link></article>
-        <article className="neon-card price-card"><h3>Enterprise</h3><strong>Kustom</strong><ul><li><Check />Volume khusus</li><li><Check />Integrasi sistem</li><li><Check />Dukungan prioritas</li></ul><a className="button button-ghost" href="mailto:halo@fraudguard.id">Hubungi kami</a></article>
-      </div><p className="pricing-note">Paket dan pembayaran masih tahap validasi bisnis. Tidak ada tagihan tanpa persetujuan Anda.</p></section>
 
       <section className="cta neon-card"><Sparkles /><div><span className="eyebrow">SIAP MEMULAI?</span><h2>Periksa transaksi pertama Anda sekarang.</h2><p>Gunakan data contoh jika belum memiliki file.</p></div><Link className="button" href="/analyze">Buka FraudGuard <ArrowRight /></Link></section>
       <footer><Link className="brand" href="/"><ShieldCheck /> FraudGuard</Link><p>AI penjaga transaksi untuk UMKM Indonesia.</p><span>© 2026 FraudGuard. Hasil AI memerlukan verifikasi manusia.</span></footer>
