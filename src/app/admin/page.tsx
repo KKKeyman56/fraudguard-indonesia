@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Activity, ArrowRight, Bot, Database, ShieldCheck, Users } from "lucide-react";
+import { Activity, ArrowRight, Bot, Database, ShieldCheck, UserCog, Users } from "lucide-react";
 import { getAdminDashboardData, isUserAdmin } from "@/lib/admin-repository";
 import { requireUser } from "@/lib/auth";
 
@@ -31,7 +31,7 @@ export default async function AdminPage() {
   ];
 
   return <main className="app-page grid-bg admin-page">
-    <div className="page-intro admin-intro"><div><span className="eyebrow">ADMIN COMMAND CENTER // RESTRICTED</span><h1>Dashboard admin</h1><p>Pantau pertumbuhan pengguna, aktivitas analisis, dan distribusi risiko FraudGuard.</p></div><span className="admin-verified"><ShieldCheck size={16} /> ADMIN TERVERIFIKASI</span></div>
+    <div className="page-intro admin-intro"><div><span className="eyebrow">ADMIN COMMAND CENTER // RESTRICTED</span><h1>Dashboard admin</h1><p>Pantau pertumbuhan pengguna, aktivitas analisis, dan distribusi risiko FraudGuard.</p></div><div className="admin-intro-actions"><span className="admin-verified"><ShieldCheck size={16} /> ADMIN TERVERIFIKASI</span><Link className="button button-secondary button-small" href="/admin/users"><UserCog size={16} /> Kelola pengguna</Link></div></div>
     <section className="admin-stat-grid" aria-label="Statistik utama">{stats.map((stat) => { const Icon = stat.icon; return <article className="neon-card admin-stat" key={stat.label}><Icon size={21} /><span>{stat.label}</span><strong>{stat.value.toLocaleString("id-ID")}</strong><small>{stat.note}</small></article>; })}</section>
     <section className="admin-grid">
       <article className="neon-card admin-risk-card"><div className="admin-section-title"><div><span className="eyebrow">RISK DISTRIBUTION</span><h2>Status seluruh transaksi</h2></div><Activity size={27} /></div><div className="risk-bars"><div><p><span>AMAN</span><strong>{data.risk.safe} · {percent(data.risk.safe)}%</strong></p><i><b className="safe" style={{ width: `${percent(data.risk.safe)}%` }} /></i></div><div><p><span>WASPADA</span><strong>{data.risk.warning} · {percent(data.risk.warning)}%</strong></p><i><b className="warning" style={{ width: `${percent(data.risk.warning)}%` }} /></i></div><div><p><span>TERDETEKSI</span><strong>{data.risk.detected} · {percent(data.risk.detected)}%</strong></p><i><b className="danger" style={{ width: `${percent(data.risk.detected)}%` }} /></i></div></div><p className="admin-note">Statistik adalah alat pemantauan. Keputusan final terhadap transaksi tetap memerlukan verifikasi manusia.</p></article>

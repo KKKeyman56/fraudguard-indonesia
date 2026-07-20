@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { analyzeWithGroq } from "@/lib/groq";
 import { analyzeRequestSchema } from "@/lib/schemas";
 import type { AnalysisResult, BatchAnalysis } from "@/types/transaction";
-import { getVerifiedClaims } from "@/lib/auth";
+import { getAccountStatus, getVerifiedClaims } from "@/lib/auth";
 import { persistAnalysis } from "@/lib/analysis-repository";
 
 export const runtime = "nodejs";
@@ -35,6 +35,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: "Silakan masuk untuk menggunakan analisis AI.", code: "UNAUTHORIZED" },
       { status: 401 },
+    );
+  }
+  if ((await getAccountStatus(String(claims.sub))) !== "active") {
+    return NextResponse.json(
+      { error: "Akun Anda sedang dinonaktifkan. Hubungi administrator FraudGuard.", code: "ACCOUNT_SUSPENDED" },
+      { status: 403 },
     );
   }
   const contentLength = Number(request.headers.get("content-length") || 0);
