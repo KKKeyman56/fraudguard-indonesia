@@ -36,7 +36,7 @@ export default async function BillingPage() {
           <Bot size={26} />
           <h2>{detail.name}</h2><strong>{detail.price}</strong><p>{detail.description}</p>
           <ul>{features[plan].map((feature) => <li key={feature}><Check size={16} /> {feature}</li>)}</ul>
-          {active ? <button className="button button-ghost" disabled>Paket saat ini</button> : plan === "enterprise" ? <a className="button button-ghost" href="mailto:halo@fraudguard.id?subject=Permintaan%20Paket%20Enterprise">Hubungi tim <ArrowRight size={16} /></a> : <a className="button" href="mailto:halo@fraudguard.id?subject=Permintaan%20Upgrade%20FraudGuard%20Pro">Ajukan upgrade <ArrowRight size={16} /></a>}
+          {active ? <button className="button button-ghost" disabled>Paket saat ini</button> : plan === "enterprise" ? <a className="button button-ghost" href="mailto:halo@fraudguard.id?subject=Permintaan%20Paket%20FraudGuard%20Max">Hubungi tim <ArrowRight size={16} /></a> : <a className="button" href="mailto:halo@fraudguard.id?subject=Permintaan%20Upgrade%20FraudGuard%20Pro">Ajukan upgrade <ArrowRight size={16} /></a>}
         </article>;
       })}
     </section>

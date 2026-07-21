@@ -5,6 +5,7 @@ import { Activity, ArrowLeft, Bot, CalendarDays, Database, ShieldAlert, UserCog 
 import { ManageUserControls } from "@/components/ManageUserControls";
 import { getAdminUserDetail, isUserAdmin } from "@/lib/admin-repository";
 import { requireUser } from "@/lib/auth";
+import { PLAN_DETAILS } from "@/lib/plans";
 
 export const metadata: Metadata = { title: "Detail Pengguna" };
 
@@ -44,7 +45,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
 
     <section className="admin-grid">
       <article className="neon-card admin-risk-card"><div className="admin-section-title"><div><span className="eyebrow">RISK PROFILE</span><h2>Distribusi transaksi</h2></div><Activity size={27} /></div><div className="risk-count-grid"><div><span>AMAN</span><strong>{data.risk.safe}</strong></div><div><span>WASPADA</span><strong>{data.risk.warning}</strong></div><div><span>TERDETEKSI</span><strong>{data.risk.detected}</strong></div></div></article>
-      <article className="neon-card admin-users-card"><div className="admin-section-title"><div><span className="eyebrow">ACCOUNT INFO</span><h2>Informasi akses</h2></div><UserCog size={27} /></div><dl className="account-info"><div><dt>ID akun</dt><dd>{user.id}</dd></div><div><dt>Role</dt><dd>{user.role === "admin" ? "Administrator" : "Pengguna"}</dd></div><div><dt>Status</dt><dd>{user.status === "active" ? "Aktif" : "Dinonaktifkan"}</dd></div><div><dt>Paket</dt><dd>{user.plan.toUpperCase()} · {user.monthlyAnalysisCount} analisis bulan ini</dd></div><div><dt>Analisis terakhir</dt><dd>{formatDate(user.lastAnalysisAt)} WIB</dd></div></dl></article>
+      <article className="neon-card admin-users-card"><div className="admin-section-title"><div><span className="eyebrow">ACCOUNT INFO</span><h2>Informasi akses</h2></div><UserCog size={27} /></div><dl className="account-info"><div><dt>ID akun</dt><dd>{user.id}</dd></div><div><dt>Role</dt><dd>{user.role === "admin" ? "Administrator" : "Pengguna"}</dd></div><div><dt>Status</dt><dd>{user.status === "active" ? "Aktif" : "Dinonaktifkan"}</dd></div><div><dt>Paket</dt><dd>{PLAN_DETAILS[user.plan].name} · {user.monthlyAnalysisCount} analisis bulan ini</dd></div><div><dt>Analisis terakhir</dt><dd>{formatDate(user.lastAnalysisAt)} WIB</dd></div></dl></article>
     </section>
 
     <section className="neon-card admin-activity-card"><div className="admin-section-title"><div><span className="eyebrow">USER ACTIVITY</span><h2>Analisis terbaru</h2></div><span className="admin-table-note">10 aktivitas terbaru</span></div>{data.recentRuns.length === 0 ? <div className="empty-state">Pengguna belum pernah menjalankan analisis.</div> : <div className="table-wrap"><table className="admin-table"><thead><tr><th>Waktu</th><th>Sumber</th><th>Model</th><th>Risiko</th><th>Status</th></tr></thead><tbody>{data.recentRuns.map((run) => { const label = riskLabel(run.overallRisk); return <tr key={run.id}><td>{formatDate(run.createdAt)} WIB</td><td>{run.source === "manual" ? "Input manual" : "Upload file"}</td><td>{run.model}</td><td>{run.overallRisk}/100</td><td><span className={`status ${label.toLowerCase()}`}>{label}</span></td></tr>; })}</tbody></table></div>}</section>

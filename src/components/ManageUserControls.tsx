@@ -36,7 +36,7 @@ export function ManageUserControls({ targetId, currentUserId, role, status, plan
     <form action={planAction} className="role-form">
       <input type="hidden" name="operation" value="plan" />
       <input type="hidden" name="targetId" value={targetId} />
-      <label><span className="sr-only">Paket pengguna</span><select name="plan" defaultValue={plan} aria-label="Paket pengguna"><option value="free">Free</option><option value="pro">Pro</option><option value="enterprise">Enterprise</option></select></label>
+      <label><span className="sr-only">Paket pengguna</span><select name="plan" defaultValue={plan} aria-label="Paket pengguna"><option value="free">Gratis</option><option value="pro">Pro</option><option value="enterprise">Max</option></select></label>
       <SubmitButton label="Simpan paket" icon="save" />
     </form>
     <form

@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Search, ShieldCheck, UserCog, Users } from "
 import { ManageUserControls } from "@/components/ManageUserControls";
 import { getAdminUsers, isUserAdmin } from "@/lib/admin-repository";
 import { requireUser } from "@/lib/auth";
+import { PLAN_DETAILS } from "@/lib/plans";
 
 export const metadata: Metadata = { title: "Manajemen Pengguna" };
 
@@ -56,7 +57,7 @@ export default async function AdminUsersPage({
           <thead><tr><th>Pengguna</th><th>Status</th><th>Aktivitas</th><th>Terakhir aktif</th><th>Kontrol</th><th>Detail</th></tr></thead>
           <tbody>{data.users.map((user) => <tr key={user.id}>
             <td><div className="user-identity"><span className="admin-avatar">{user.email.slice(0, 1).toUpperCase()}</span><div><strong>{user.email}</strong><small>Bergabung {formatDate(user.createdAt)} WIB</small></div></div></td>
-            <td><div className="account-badges"><span className={`account-status ${user.status}`}>{user.status === "active" ? "AKTIF" : "NONAKTIF"}</span><span className={`role-badge ${user.role}`}>{user.role.toUpperCase()}</span><span className={`plan-badge ${user.plan}`}>{user.plan.toUpperCase()}</span></div></td>
+            <td><div className="account-badges"><span className={`account-status ${user.status}`}>{user.status === "active" ? "AKTIF" : "NONAKTIF"}</span><span className={`role-badge ${user.role}`}>{user.role.toUpperCase()}</span><span className={`plan-badge ${user.plan}`}>{PLAN_DETAILS[user.plan].name.toUpperCase()}</span></div></td>
             <td><strong>{user.analysisCount}</strong> analisis<br /><small>{user.monthlyAnalysisCount} bulan ini · {user.transactionCount} transaksi · {user.detectedCount} terdeteksi</small></td>
             <td>{formatDate(user.lastAnalysisAt)} WIB</td>
             <td><ManageUserControls targetId={user.id} currentUserId={currentUserId} role={user.role} status={user.status} plan={user.plan} compact /></td>
