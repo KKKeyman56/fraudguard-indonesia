@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Paket & Kuota" };
 const features: Record<SubscriptionPlan, string[]> = {
   free: ["50 sesi analisis per bulan", "Maksimal 50 transaksi per sesi", "Riwayat dan laporan PDF"],
   pro: ["5.000 sesi analisis per bulan", "Insight AI lengkap", "Prioritas pengembangan fitur UMKM"],
-  enterprise: ["Sesi analisis tanpa batas", "Integrasi dan volume khusus", "Dukungan prioritas"],
+  enterprise: ["10.000 sesi analisis per bulan", "Integrasi dan volume khusus", "Dukungan prioritas"],
 };
 
 export default async function BillingPage() {
