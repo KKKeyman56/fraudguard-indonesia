@@ -19,6 +19,15 @@ export type AnalysisQuota = {
   periodStart: string;
 };
 
+export type PaymentSummary = {
+  orderId: string;
+  plan: SubscriptionPlan;
+  amount: number;
+  status: "created" | "pending" | "paid" | "denied" | "cancelled" | "expired" | "failed" | "refunded";
+  createdAt: string;
+  paidAt: string | null;
+};
+
 export async function getAnalysisQuota(): Promise<AnalysisQuota> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("get_my_analysis_quota").maybeSingle();
@@ -34,4 +43,30 @@ export async function getAnalysisQuota(): Promise<AnalysisQuota> {
     remaining: row.remaining === null ? null : Number(row.remaining),
     periodStart: row.period_start,
   };
+}
+
+export async function getRecentPayments(): Promise<PaymentSummary[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("payments")
+    .select("order_id, plan, amount, status, created_at, paid_at")
+    .order("created_at", { ascending: false })
+    .limit(5);
+  if (error) throw new Error(`PAYMENTS_READ_FAILED:${error.code}`);
+
+  return (data ?? []).flatMap((row) => {
+    if (!isSubscriptionPlan(row.plan) || row.plan === "free") return [];
+    const validStatuses: PaymentSummary["status"][] = [
+      "created", "pending", "paid", "denied", "cancelled", "expired", "failed", "refunded",
+    ];
+    if (!validStatuses.includes(row.status as PaymentSummary["status"])) return [];
+    return [{
+      orderId: String(row.order_id),
+      plan: row.plan,
+      amount: Number(row.amount),
+      status: row.status as PaymentSummary["status"],
+      createdAt: String(row.created_at),
+      paidAt: row.paid_at ? String(row.paid_at) : null,
+    }];
+  });
 }

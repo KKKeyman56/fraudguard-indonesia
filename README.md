@@ -24,9 +24,23 @@ Buka `http://localhost:3000`.
    - `GROQ_MODEL` — `openai/gpt-oss-120b`.
    - `NEXT_PUBLIC_SUPABASE_URL` — Project URL Supabase.
    - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` — publishable key Supabase, bukan secret/service-role key.
+   - `SUPABASE_SERVICE_ROLE_KEY` — secret Supabase khusus server untuk webhook pembayaran.
+   - `APP_URL` — URL publik aplikasi, misalnya `https://fraudguard-indonesia.vercel.app`.
+   - `MIDTRANS_SERVER_KEY` — Server Key dari akun Midtrans Sandbox. Jangan gunakan Client Key.
+   - `MIDTRANS_IS_PRODUCTION` — `false` selama pengujian Sandbox.
 4. Deploy, lalu periksa `/api/health`. Nilai `aiConfigured` harus `true`.
 
 Pada Supabase Auth URL Configuration, gunakan Site URL `https://fraudguard-indonesia.vercel.app` dan tambahkan `https://fraudguard-indonesia.vercel.app/auth/callback` ke Redirect URLs.
+
+## Pembayaran Midtrans Sandbox
+
+1. Terapkan migration terbaru di folder `supabase/migrations`.
+2. Tambahkan seluruh environment variable Midtrans/Supabase di Vercel, lalu redeploy.
+3. Di Midtrans Sandbox Dashboard, buka **Settings → Configuration** dan isi **Payment Notification URL** dengan `https://fraudguard-indonesia.vercel.app/api/billing/webhook`.
+4. Isi Finish Redirect URL dengan `https://fraudguard-indonesia.vercel.app/billing?payment=return`.
+5. Uji dari halaman `/billing`. Paket hanya diaktifkan oleh webhook terverifikasi, bukan oleh redirect browser.
+
+Server Key tidak pernah dikirim ke browser. Mode redirect menggunakan halaman pembayaran yang di-host Midtrans, sehingga aplikasi tidak memproses atau menyimpan data kartu.
 
 ## Format file transaksi
 
