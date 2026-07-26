@@ -45,6 +45,29 @@ export async function getAnalysisQuota(): Promise<AnalysisQuota> {
   };
 }
 
+export async function reserveAnalysisQuota(transactionCount: number): Promise<string> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("reserve_my_transaction_quota", {
+    p_transaction_count: transactionCount,
+  });
+  if (error) {
+    if (error.message.includes("TRANSACTION_QUOTA_EXCEEDED")) {
+      throw new Error("TRANSACTION_QUOTA_EXCEEDED");
+    }
+    throw new Error(`ANALYSIS_QUOTA_RESERVE_FAILED:${error.code}`);
+  }
+  if (typeof data !== "string") throw new Error("ANALYSIS_QUOTA_RESERVATION_INVALID");
+  return data;
+}
+
+export async function releaseAnalysisQuota(reservationId: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("release_my_transaction_quota", {
+    p_reservation_id: reservationId,
+  });
+  if (error) throw new Error(`ANALYSIS_QUOTA_RELEASE_FAILED:${error.code}`);
+}
+
 export async function getRecentPayments(): Promise<PaymentSummary[]> {
   const supabase = await createClient();
   const { data, error } = await supabase

@@ -4,7 +4,11 @@ import { analyzeRequestSchema } from "@/lib/schemas";
 import type { AnalysisResult, BatchAnalysis } from "@/types/transaction";
 import { getAccountStatus, getVerifiedClaims } from "@/lib/auth";
 import { persistAnalysis } from "@/lib/analysis-repository";
-import { getAnalysisQuota } from "@/lib/billing-repository";
+import {
+  getAnalysisQuota,
+  releaseAnalysisQuota,
+  reserveAnalysisQuota,
+} from "@/lib/billing-repository";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -79,60 +83,102 @@ export async function POST(request: NextRequest) {
         { status: 503 },
       );
     }
-    if (quota.monthlyLimit !== null && quota.remaining === 0) {
+    const requestedTransactions = parsed.data.transactions.length;
+    if (
+      quota.monthlyLimit !== null
+      && quota.remaining !== null
+      && requestedTransactions > quota.remaining
+    ) {
       return NextResponse.json(
         {
-          error: `Kuota paket ${quota.plan.toUpperCase()} bulan ini sudah habis. Buka halaman Paket untuk melihat pilihan upgrade.`,
+          error: `Sisa kuota paket ${quota.plan.toUpperCase()} hanya ${quota.remaining.toLocaleString("id-ID")} transaksi. Kurangi jumlah data atau buka halaman Paket untuk upgrade.`,
           code: "QUOTA_EXCEEDED",
         },
         { status: 402 },
       );
     }
 
-    const { data, model } = await analyzeWithGroq(parsed.data.transactions);
-    const transactionMap = new Map(parsed.data.transactions.map((item) => [item.id, item]));
-    const results: AnalysisResult[] = data.results.map((item) => ({
-      transaction: transactionMap.get(item.id)!,
-      riskScore: item.riskScore,
-      label: labelFromScore(item.riskScore),
-      reasoning: item.reasoning,
-      recommendation: item.recommendation,
-    }));
+    let reservationId: string;
+    try {
+      reservationId = await reserveAnalysisQuota(requestedTransactions);
+    } catch (reservationError) {
+      if (
+        reservationError instanceof Error
+        && reservationError.message === "TRANSACTION_QUOTA_EXCEEDED"
+      ) {
+        return NextResponse.json(
+          {
+            error: "Kuota transaksi berubah karena ada analisis lain yang sedang berjalan. Coba lagi setelah proses tersebut selesai.",
+            code: "QUOTA_EXCEEDED",
+          },
+          { status: 402 },
+        );
+      }
+      console.error("FraudGuard quota reservation error", reservationError);
+      return NextResponse.json(
+        { error: "Kuota transaksi belum dapat diamankan. Silakan coba lagi.", code: "QUOTA_UNAVAILABLE" },
+        { status: 503 },
+      );
+    }
 
-    const overallRisk = Math.round(
-      results.reduce((total, item) => total + item.riskScore, 0) / results.length,
-    );
-
-    const response: BatchAnalysis = {
-      results,
-      summary: {
-        total: results.length,
-        aman: results.filter((item) => item.label === "AMAN").length,
-        waspada: results.filter((item) => item.label === "WASPADA").length,
-        terdeteksi: results.filter((item) => item.label === "TERDETEKSI").length,
-        overallRisk,
-        aiInsight: data.summary.aiInsight,
-      },
-      meta: { model, analyzedAt: new Date().toISOString() },
+    const releaseReservation = async () => {
+      try {
+        await releaseAnalysisQuota(reservationId);
+      } catch (releaseError) {
+        console.error("FraudGuard quota release error", releaseError);
+      }
     };
 
     try {
-      response.meta = {
-        ...response.meta!,
-        analysisId: await persistAnalysis(userKey, response),
-        persisted: true,
-      };
-    } catch (persistenceError) {
-      console.error("FraudGuard persistence error", persistenceError);
-      response.meta = {
-        ...response.meta!,
-        persisted: false,
-        persistenceWarning:
-          "Analisis selesai, tetapi laporan belum tersimpan. Unduh PDF sekarang atau coba analisis kembali.",
-      };
-    }
+      const { data, model } = await analyzeWithGroq(parsed.data.transactions);
+      const transactionMap = new Map(parsed.data.transactions.map((item) => [item.id, item]));
+      const results: AnalysisResult[] = data.results.map((item) => ({
+        transaction: transactionMap.get(item.id)!,
+        riskScore: item.riskScore,
+        label: labelFromScore(item.riskScore),
+        reasoning: item.reasoning,
+        recommendation: item.recommendation,
+      }));
 
-    return NextResponse.json(response, { headers: { "Cache-Control": "no-store" } });
+      const overallRisk = Math.round(
+        results.reduce((total, item) => total + item.riskScore, 0) / results.length,
+      );
+
+      const response: BatchAnalysis = {
+        results,
+        summary: {
+          total: results.length,
+          aman: results.filter((item) => item.label === "AMAN").length,
+          waspada: results.filter((item) => item.label === "WASPADA").length,
+          terdeteksi: results.filter((item) => item.label === "TERDETEKSI").length,
+          overallRisk,
+          aiInsight: data.summary.aiInsight,
+        },
+        meta: { model, analyzedAt: new Date().toISOString() },
+      };
+
+      try {
+        response.meta = {
+          ...response.meta!,
+          analysisId: await persistAnalysis(userKey, response),
+          persisted: true,
+        };
+      } catch (persistenceError) {
+        console.error("FraudGuard persistence error", persistenceError);
+        response.meta = {
+          ...response.meta!,
+          persisted: false,
+          persistenceWarning:
+            "Analisis selesai, tetapi laporan belum tersimpan. Unduh PDF sekarang atau coba analisis kembali.",
+        };
+      }
+
+      await releaseReservation();
+      return NextResponse.json(response, { headers: { "Cache-Control": "no-store" } });
+    } catch (analysisError) {
+      await releaseReservation();
+      throw analysisError;
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : "UNKNOWN";
     if (message === "GROQ_API_KEY_MISSING") {

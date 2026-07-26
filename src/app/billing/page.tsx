@@ -9,9 +9,9 @@ import { PurchasePlanButton } from "@/components/PurchasePlanButton";
 export const metadata: Metadata = { title: "Paket & Kuota" };
 
 const features: Record<SubscriptionPlan, string[]> = {
-  free: ["50 sesi analisis per bulan", "Maksimal 50 transaksi per sesi", "Riwayat dan laporan PDF"],
-  pro: ["5.000 sesi analisis per bulan", "Insight AI lengkap", "Prioritas pengembangan fitur UMKM"],
-  enterprise: ["10.000 sesi analisis per bulan", "Integrasi dan volume khusus", "Dukungan prioritas"],
+  free: ["50 transaksi dianalisis per bulan", "Maksimal 50 transaksi sekali analisis", "Riwayat dan laporan PDF"],
+  pro: ["5.000 transaksi dianalisis per bulan", "Insight AI lengkap", "Prioritas pengembangan fitur UMKM"],
+  enterprise: ["10.000 transaksi dianalisis per bulan", "Integrasi dan volume khusus", "Dukungan prioritas"],
 };
 
 const paymentLabels: Record<PaymentSummary["status"], string> = {
@@ -47,7 +47,7 @@ export default async function BillingPage({
     </div>}
 
     <section className="neon-card usage-card">
-      <div><span className="eyebrow">PEMAKAIAN BULAN INI</span><h2>{quota.monthlyLimit === null ? "Analisis tanpa batas" : `${quota.used.toLocaleString("id-ID")} dari ${quota.monthlyLimit.toLocaleString("id-ID")} sesi`}</h2><p>{quota.monthlyLimit === null ? "Akun Anda tidak memiliki batas sesi bulanan." : `${quota.remaining?.toLocaleString("id-ID")} sesi masih tersedia sampai pergantian bulan.`}</p></div>
+      <div><span className="eyebrow">PEMAKAIAN BULAN INI</span><h2>{quota.monthlyLimit === null ? "Transaksi tanpa batas" : `${quota.used.toLocaleString("id-ID")} dari ${quota.monthlyLimit.toLocaleString("id-ID")} transaksi`}</h2><p>{quota.monthlyLimit === null ? "Akun Anda tidak memiliki batas transaksi bulanan." : `${quota.remaining?.toLocaleString("id-ID")} transaksi masih dapat dianalisis sampai pergantian bulan.`}</p></div>
       <Gauge size={56} />
       {quota.monthlyLimit !== null && <div className="usage-progress"><i style={{ width: `${percentage}%` }} /></div>}
     </section>
