@@ -7,6 +7,7 @@ import { useState } from "react";
 
 const links = [
   { href: "/", label: "Beranda" },
+  { href: "/edukasi", label: "Edukasi" },
   { href: "/dashboard", label: "Dashboard" },
   { href: "/analyze", label: "Analisis" },
   { href: "/history", label: "Riwayat" },
@@ -28,7 +29,7 @@ export function AppHeader({ userEmail, isAdmin = false }: { userEmail?: string |
         </button>
         <nav className={open ? "nav-links open" : "nav-links"} aria-label="Navigasi utama">
           {links.map((link) => (
-            <Link key={link.href} href={link.href} onClick={() => setOpen(false)} className={pathname === link.href ? "active" : ""}>
+            <Link key={link.href} href={link.href} onClick={() => setOpen(false)} className={pathname === link.href || (link.href !== "/" && pathname.startsWith(`${link.href}/`)) ? "active" : ""}>
               {link.label}
             </Link>
           ))}

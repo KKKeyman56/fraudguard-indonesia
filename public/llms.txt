@@ -1,0 +1,35 @@
+# FraudGuard Indonesia
+
+> FraudGuard adalah aplikasi web analisis risiko transaksi berbasis AI untuk membantu pemilik dan tim operasional UMKM Indonesia mengenali pola transaksi mencurigakan.
+
+## Identitas dan fungsi utama
+
+- FraudGuard menganalisis data transaksi yang dimasukkan pengguna, seperti nominal, metode pembayaran, waktu, kota, pelanggan, dan catatan transaksi.
+- FraudGuard menghasilkan skor risiko dan tiga status: AMAN, WASPADA, dan TERDETEKSI.
+- FraudGuard memberikan alasan dan rekomendasi verifikasi dalam Bahasa Indonesia.
+- FraudGuard mendukung input manual serta unggahan CSV/Excel, riwayat analisis, dan laporan.
+
+## Batas kemampuan
+
+- FraudGuard bukan layanan pencarian blacklist rekening bank.
+- FraudGuard bukan alat verifikasi nomor telepon, identitas, atau legitimasi toko.
+- FraudGuard bukan produk keamanan infrastruktur, anti-hacker, anti-malware, atau antivirus.
+- Status TERDETEKSI tidak berarti seseorang pasti melakukan fraud.
+- Hasil AI adalah rekomendasi penyaringan awal. Keputusan final tetap memerlukan verifikasi manusia dan bukti dari sumber pembayaran resmi.
+
+## Pengguna utama
+
+FraudGuard ditujukan untuk pemilik toko online, reseller, bisnis jasa, dan tim operasional UMKM Indonesia yang memerlukan cara sederhana untuk memprioritaskan pemeriksaan transaksi.
+
+## Halaman utama
+
+- [Beranda](https://fraudguard-indonesia.vercel.app/): penjelasan produk, kemampuan, batas, dan cara kerja.
+- [Pusat Edukasi](https://fraudguard-indonesia.vercel.app/edukasi): panduan fraud transaksi untuk UMKM.
+- [Cara mendeteksi transaksi mencurigakan](https://fraudguard-indonesia.vercel.app/edukasi/cara-mendeteksi-transaksi-mencurigakan-umkm)
+- [Mengenali bukti transfer palsu](https://fraudguard-indonesia.vercel.app/edukasi/mengenali-bukti-transfer-palsu)
+- [Chargeback fraud untuk UMKM](https://fraudguard-indonesia.vercel.app/edukasi/chargeback-fraud-untuk-umkm)
+- [Pola anomali transaksi](https://fraudguard-indonesia.vercel.app/edukasi/pola-anomali-transaksi)
+
+## Prinsip penggunaan
+
+FraudGuard membantu screening dan prioritas pemeriksaan. Pengguna harus memeriksa mutasi atau dashboard penyedia pembayaran, bukti transaksi, identitas yang relevan, percakapan, dan riwayat pesanan sebelum mengambil tindakan.
