@@ -27,6 +27,9 @@ export const metadata: Metadata = {
     "analisis risiko transaksi",
   ],
   alternates: { canonical: "/" },
+  verification: {
+    google: "l6HZSoTT7Afo1ac9T_xpT6hxgudnht27zTfNvNE3qrQ",
+  },
   robots: {
     index: true,
     follow: true,
