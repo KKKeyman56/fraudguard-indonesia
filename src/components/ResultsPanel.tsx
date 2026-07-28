@@ -8,7 +8,15 @@ import { RiskGauge } from "@/components/RiskGauge";
 
 const rupiah = new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 });
 
-export function ResultsPanel({ analysis, onReset }: { analysis: BatchAnalysis; onReset?: () => void }) {
+export function ResultsPanel({
+  analysis,
+  onReset,
+  showReportLink = true,
+}: {
+  analysis: BatchAnalysis;
+  onReset?: () => void;
+  showReportLink?: boolean;
+}) {
   return (
     <section className="results-stack" aria-live="polite">
       {analysis.meta?.persistenceWarning && <div className="alert" role="alert">{analysis.meta.persistenceWarning}</div>}
@@ -54,7 +62,7 @@ export function ResultsPanel({ analysis, onReset }: { analysis: BatchAnalysis; o
 
       <div className="result-actions">
         <button className="button" onClick={() => downloadAnalysisPdf(analysis)}><Download size={18} /> Unduh PDF</button>
-        <Link className="button button-ghost" href="/report">Buka halaman laporan</Link>
+        {showReportLink && <Link className="button button-ghost" href="/report">Buka halaman laporan</Link>}
         {onReset && <button className="button button-ghost" onClick={onReset}><RotateCcw size={18} /> Analisis baru</button>}
       </div>
     </section>

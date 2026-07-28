@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Activity, ArrowLeft, Bot, CalendarDays, Database, ShieldAlert, UserCog } from "lucide-react";
+import { Activity, ArrowLeft, ArrowRight, Bot, CalendarDays, Database, ShieldAlert, UserCog } from "lucide-react";
 import { ManageUserControls } from "@/components/ManageUserControls";
 import { getAdminUserDetail, isUserAdmin } from "@/lib/admin-repository";
 import { requireUser } from "@/lib/auth";
@@ -48,6 +48,12 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
       <article className="neon-card admin-users-card"><div className="admin-section-title"><div><span className="eyebrow">ACCOUNT INFO</span><h2>Informasi akses</h2></div><UserCog size={27} /></div><dl className="account-info"><div><dt>ID akun</dt><dd>{user.id}</dd></div><div><dt>Role</dt><dd>{user.role === "admin" ? "Administrator" : "Pengguna"}</dd></div><div><dt>Status</dt><dd>{user.status === "active" ? "Aktif" : "Dinonaktifkan"}</dd></div><div><dt>Paket</dt><dd>{PLAN_DETAILS[user.plan].name} · {user.monthlyAnalysisCount.toLocaleString("id-ID")} transaksi bulan ini</dd></div><div><dt>Analisis terakhir</dt><dd>{formatDate(user.lastAnalysisAt)} WIB</dd></div></dl></article>
     </section>
 
-    <section className="neon-card admin-activity-card"><div className="admin-section-title"><div><span className="eyebrow">USER ACTIVITY</span><h2>Analisis terbaru</h2></div><span className="admin-table-note">10 aktivitas terbaru</span></div>{data.recentRuns.length === 0 ? <div className="empty-state">Pengguna belum pernah menjalankan analisis.</div> : <div className="table-wrap"><table className="admin-table"><thead><tr><th>Waktu</th><th>Sumber</th><th>Model</th><th>Risiko</th><th>Status</th></tr></thead><tbody>{data.recentRuns.map((run) => { const label = riskLabel(run.overallRisk); return <tr key={run.id}><td>{formatDate(run.createdAt)} WIB</td><td>{run.source === "manual" ? "Input manual" : "Upload file"}</td><td>{run.model}</td><td>{run.overallRisk}/100</td><td><span className={`status ${label.toLowerCase()}`}>{label}</span></td></tr>; })}</tbody></table></div>}</section>
+    <section className="neon-card admin-activity-card">
+      <div className="admin-section-title">
+        <div><span className="eyebrow">USER ACTIVITY</span><h2>Analisis terbaru</h2></div>
+        <Link className="button button-small button-ghost" href={`/admin/users/${user.id}/history`}>Lihat semua riwayat <ArrowRight size={15} /></Link>
+      </div>
+      {data.recentRuns.length === 0 ? <div className="empty-state">Pengguna belum pernah menjalankan analisis.</div> : <div className="table-wrap"><table className="admin-table"><thead><tr><th>Waktu</th><th>Sumber</th><th>Model</th><th>Risiko</th><th>Status</th><th>Detail</th></tr></thead><tbody>{data.recentRuns.map((run) => { const label = riskLabel(run.overallRisk); return <tr key={run.id}><td>{formatDate(run.createdAt)} WIB</td><td>{run.source === "manual" ? "Input manual" : "Upload file"}</td><td>{run.model}</td><td>{run.overallRisk}/100</td><td><span className={`status ${label.toLowerCase()}`}>{label}</span></td><td><Link className="text-link" href={`/admin/users/${user.id}/history/${run.id}`}>Buka laporan <ArrowRight size={14} /></Link></td></tr>; })}</tbody></table></div>}
+    </section>
   </main>;
 }
