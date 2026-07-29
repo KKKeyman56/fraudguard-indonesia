@@ -4,7 +4,7 @@ import { scoreTransactions } from "@/lib/risk-engine";
 import { analyzeRequestSchema } from "@/lib/schemas";
 import type { AnalysisResult, BatchAnalysis } from "@/types/transaction";
 import { getAccountStatus, getVerifiedClaims } from "@/lib/auth";
-import { persistAnalysis } from "@/lib/analysis-repository";
+import { getBusinessBaseline, persistAnalysis } from "@/lib/analysis-repository";
 import {
   getAnalysisQuota,
   releaseAnalysisQuota,
@@ -135,7 +135,13 @@ export async function POST(request: NextRequest) {
     };
 
     try {
-      const risk = scoreTransactions(parsed.data.transactions);
+      let baseline;
+      try {
+        baseline = await getBusinessBaseline(userKey);
+      } catch {
+        console.warn(JSON.stringify({ level: "warn", event: "business_baseline_unavailable", requestId }));
+      }
+      const risk = scoreTransactions(parsed.data.transactions, baseline);
       const explanation = await explainRiskWithGroq(risk);
       const explanationById = new Map(explanation.results.map((item) => [item.id, item]));
       const results: AnalysisResult[] = risk.results.map((item) => {
@@ -166,13 +172,20 @@ export async function POST(request: NextRequest) {
           analyzedAt: new Date().toISOString(),
           engineVersion: risk.engineVersion,
           explanationProvider: explanation.provider,
+          baseline: risk.baseline,
         },
       };
 
       try {
+        const persisted = await persistAnalysis(userKey, response);
+        response.results = response.results.map((item) => ({
+          ...item,
+          recordId: persisted.transactionIds.get(item.transaction.id),
+          review: { feedback: "UNKNOWN", status: "PENDING" },
+        }));
         response.meta = {
           ...response.meta!,
-          analysisId: await persistAnalysis(userKey, response),
+          analysisId: persisted.analysisId,
           persisted: true,
         };
       } catch {
@@ -190,7 +203,6 @@ export async function POST(request: NextRequest) {
         level: "info",
         event: "risk_analysis_completed",
         requestId,
-        userId: userKey,
         transactionCount: results.length,
         overallRisk: risk.overallRisk,
         engineVersion: risk.engineVersion,

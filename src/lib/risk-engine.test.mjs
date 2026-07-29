@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { buildBusinessBaseline } from "./baseline.ts";
 import { createFallbackExplanation } from "./fallback-explanation.ts";
 import { RISK_ENGINE_VERSION, scoreTransactions } from "./risk-engine.ts";
 
@@ -103,4 +104,69 @@ test("fallback lokal menghasilkan penjelasan tanpa memanggil Groq", () => {
   assert.equal(explanation.results[0].id, "TX-FALLBACK");
   assert.ok(explanation.results[0].reasoning.length > 0);
   assert.ok(explanation.insight.includes("risiko tinggi"));
+});
+
+test("baseline bisnis menghitung median, jam, metode, dan kota secara deterministik", () => {
+  const history = Array.from({ length: 20 }, (_, index) => ({
+    nominal: (index + 1) * 100_000,
+    metode: index < 15 ? "QRIS" : "Transfer bank",
+    waktu: `2026-07-${String(index + 1).padStart(2, "0")}T${String(8 + (index % 10)).padStart(2, "0")}:00`,
+    kota: index < 14 ? "Bandung" : "Jakarta",
+  }));
+
+  const baseline = buildBusinessBaseline(history);
+
+  assert.deepEqual(baseline, buildBusinessBaseline(structuredClone(history)));
+  assert.equal(baseline.sampleSize, 20);
+  assert.equal(baseline.medianAmount, 1_000_000);
+  assert.equal(baseline.p90Amount, 1_800_000);
+  assert.deepEqual(baseline.dominantMethods, ["qris"]);
+  assert.deepEqual(baseline.dominantCities, ["bandung"]);
+  assert.equal(baseline.normalHourStart, 8);
+  assert.equal(baseline.normalHourEnd, 16);
+});
+
+test("baseline toko memunculkan sinyal anomali nominal, waktu, metode, dan kota", () => {
+  const baseline = {
+    sampleSize: 30,
+    medianAmount: 300_000,
+    p90Amount: 900_000,
+    normalHourStart: 8,
+    normalHourEnd: 19,
+    dominantMethods: ["qris"],
+    dominantCities: ["bandung"],
+  };
+  const result = scoreTransactions([{
+    ...normalTransaction,
+    id: "TX-BASELINE",
+    nominal: 2_000_000,
+    metode: "Kartu kredit",
+    waktu: "2026-07-29T21:15",
+    kota: "Surabaya",
+  }], baseline);
+  const codes = result.results[0].signals.map((item) => item.code);
+
+  assert.ok(codes.includes("FG-R013"));
+  assert.ok(codes.includes("FG-R014"));
+  assert.ok(codes.includes("FG-R015"));
+  assert.ok(codes.includes("FG-R016"));
+  assert.deepEqual(result.baseline, baseline);
+});
+
+test("data transaksi yang lebih kaya mengaktifkan aturan akun baru dan perilaku pembayaran", () => {
+  const result = scoreTransactions([{
+    ...normalTransaction,
+    id: "TX-RICH",
+    nominal: 2_500_000,
+    accountAgeDays: 5,
+    failedPaymentCount: 4,
+    refundCount: 2,
+    itemCount: 12,
+  }]);
+  const codes = result.results[0].signals.map((item) => item.code);
+
+  assert.ok(codes.includes("FG-R017"));
+  assert.ok(codes.includes("FG-R018"));
+  assert.ok(codes.includes("FG-R019"));
+  assert.ok(codes.includes("FG-R020"));
 });

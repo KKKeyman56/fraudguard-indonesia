@@ -10,6 +10,7 @@ const links = [
   { href: "/edukasi", label: "Edukasi" },
   { href: "/dashboard", label: "Dashboard" },
   { href: "/analyze", label: "Analisis" },
+  { href: "/review", label: "Review" },
   { href: "/history", label: "Riwayat" },
   { href: "/report", label: "Laporan" },
   { href: "/billing", label: "Paket" },

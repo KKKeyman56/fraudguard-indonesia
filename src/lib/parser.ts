@@ -13,6 +13,15 @@ const aliases: Record<string, string[]> = {
   waktu: ["waktu", "tanggal", "jam", "timestamp", "date"],
   kota: ["kota", "lokasi", "city"],
   catatan: ["catatan", "note", "notes", "keterangan"],
+  orderId: ["order id", "id order", "nomor pesanan", "order"],
+  customerId: ["customer id", "id customer", "id pelanggan", "customer code"],
+  accountAgeDays: ["umur akun", "account age", "account age days", "umur akun hari"],
+  refundCount: ["jumlah refund", "refund count", "refund"],
+  failedPaymentCount: ["pembayaran gagal", "failed payment", "failed payment count"],
+  voucherCode: ["kode voucher", "voucher code", "voucher"],
+  itemCount: ["jumlah item", "item count", "qty", "quantity"],
+  channel: ["channel", "kanal", "sales channel", "platform"],
+  shippingMethod: ["pengiriman", "shipping method", "kurir", "metode pengiriman"],
 };
 
 function normalizeKey(value: string) {
@@ -39,6 +48,12 @@ function parseAmount(value: unknown) {
   return Number(cleaned);
 }
 
+function parseOptionalInteger(value: unknown) {
+  if (value === undefined || value === null || String(value).trim() === "") return undefined;
+  const parsed = Number(String(value).replace(/[^\d-]/g, ""));
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : undefined;
+}
+
 function normalizeRows(rows: RawRow[]): Transaction[] {
   const transactions = rows
     .filter((row) => Object.values(row).some((value) => String(value ?? "").trim()))
@@ -50,6 +65,15 @@ function normalizeRows(rows: RawRow[]): Transaction[] {
       waktu: String(findValue(row, "waktu")).trim(),
       kota: String(findValue(row, "kota")).trim() || undefined,
       catatan: String(findValue(row, "catatan")).trim() || undefined,
+      orderId: String(findValue(row, "orderId")).trim() || undefined,
+      customerId: String(findValue(row, "customerId")).trim() || undefined,
+      accountAgeDays: parseOptionalInteger(findValue(row, "accountAgeDays")),
+      refundCount: parseOptionalInteger(findValue(row, "refundCount")),
+      failedPaymentCount: parseOptionalInteger(findValue(row, "failedPaymentCount")),
+      voucherCode: String(findValue(row, "voucherCode")).trim() || undefined,
+      itemCount: parseOptionalInteger(findValue(row, "itemCount")) || undefined,
+      channel: String(findValue(row, "channel")).trim() || undefined,
+      shippingMethod: String(findValue(row, "shippingMethod")).trim() || undefined,
     }));
 
   if (!transactions.length) throw new Error("File tidak memiliki baris transaksi.");
@@ -110,10 +134,10 @@ export async function parseTransactionFile(file: File): Promise<Transaction[]> {
 
 export function createSampleTransactions(): Transaction[] {
   return [
-    { id: "DEMO-001", pelanggan: "Siti Rahma", nominal: 285000, metode: "QRIS", waktu: "2026-07-16 10:24", kota: "Bandung", catatan: "Pesanan hijab 3 pcs" },
-    { id: "DEMO-002", pelanggan: "Budi Santoso", nominal: 15400000, metode: "Transfer bank", waktu: "2026-07-16 02:13", kota: "Jakarta", catatan: "Akun baru, minta kirim cepat" },
-    { id: "DEMO-003", pelanggan: "Nadia Putri", nominal: 850000, metode: "Virtual account", waktu: "2026-07-16 14:55", kota: "Surabaya" },
-    { id: "DEMO-004", pelanggan: "Rizky Pratama", nominal: 7200000, metode: "Kartu kredit", waktu: "2026-07-16 03:07", kota: "Medan", catatan: "Alamat berbeda dari pemegang kartu" },
-    { id: "DEMO-005", pelanggan: "Toko Maju Jaya", nominal: 1250000, metode: "Transfer bank", waktu: "2026-07-16 11:40", kota: "Semarang", catatan: "Pelanggan berulang" },
+    { id: "DEMO-001", orderId: "ORD-1001", customerId: "CUS-001", pelanggan: "Siti Rahma", nominal: 285000, metode: "QRIS", waktu: "2026-07-16 10:24", kota: "Bandung", accountAgeDays: 420, itemCount: 3, channel: "Website", shippingMethod: "JNE", catatan: "Pesanan hijab 3 pcs" },
+    { id: "DEMO-002", orderId: "ORD-1002", customerId: "CUS-002", pelanggan: "Budi Santoso", nominal: 15400000, metode: "Transfer bank", waktu: "2026-07-16 02:13", kota: "Jakarta", accountAgeDays: 1, failedPaymentCount: 3, itemCount: 12, channel: "Marketplace", shippingMethod: "Instan", catatan: "Akun baru, minta kirim cepat" },
+    { id: "DEMO-003", orderId: "ORD-1003", customerId: "CUS-003", pelanggan: "Nadia Putri", nominal: 850000, metode: "Virtual account", waktu: "2026-07-16 14:55", kota: "Surabaya", accountAgeDays: 180, itemCount: 2, channel: "Website" },
+    { id: "DEMO-004", orderId: "ORD-1004", customerId: "CUS-004", pelanggan: "Rizky Pratama", nominal: 7200000, metode: "Kartu kredit", waktu: "2026-07-16 03:07", kota: "Medan", accountAgeDays: 3, refundCount: 2, failedPaymentCount: 4, voucherCode: "WELCOME50", itemCount: 8, channel: "Instagram", shippingMethod: "Same day", catatan: "Alamat berbeda dari pemegang kartu" },
+    { id: "DEMO-005", orderId: "ORD-1005", customerId: "CUS-005", pelanggan: "Toko Maju Jaya", nominal: 1250000, metode: "Transfer bank", waktu: "2026-07-16 11:40", kota: "Semarang", accountAgeDays: 760, itemCount: 5, channel: "WhatsApp", shippingMethod: "Cargo", catatan: "Pelanggan berulang" },
   ];
 }

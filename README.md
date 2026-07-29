@@ -32,8 +32,10 @@ Buka `http://localhost:3000`.
 
 ## Risk Engine V1
 
-- Skor dihitung server-side oleh rule engine deterministik versi `rules-v1.0.0`.
+- Skor dihitung server-side oleh rule engine deterministik versi `rules-v1.1.0`.
 - Setiap transaksi menyimpan daftar sinyal terstruktur beserta kode rule, bobot, tingkat risiko, alasan, dan rekomendasi.
+- Baseline setiap bisnis dihitung dari maksimal 500 transaksi historis milik akun tersebut: median dan persentil ke-90 nominal, jam normal, metode dominan, serta kota dominan. Transaksi berlabel masalah dikeluarkan dari baseline.
+- Halaman `/review` menyediakan antrean review, tren risiko 30 hari, feedback **Aman / Bermasalah / Belum diketahui**, catatan, status review, dan audit log.
 - Groq tidak dapat mengubah skor atau status. Data yang dikirim ke Groq dibatasi pada referensi transaksi, skor, status, dan sinyal terstruktur tanpa nama pelanggan, kota, catatan mentah, atau ID database.
 - Jika Groq timeout, rate-limited, responsnya tidak valid, atau API key kosong, endpoint tetap sukses dengan `explanationProvider: "fallback"`.
 - Jalankan `npm test`, `npm run typecheck`, `npm run lint`, dan `npm run build` sebelum deploy.
@@ -52,7 +54,9 @@ Server Key tidak pernah dikirim ke browser. Mode redirect menggunakan halaman pe
 
 ## Format file transaksi
 
-Format yang didukung: CSV dan XLSX. Kolom wajib: `pelanggan`, `nominal`, `metode`, `waktu`. Kolom opsional: `kota`, `catatan`. Nama kolom umum seperti `nama`, `amount`, `payment method`, dan `tanggal` juga dikenali. Maksimal 50 transaksi per analisis. Contoh ada di `public/contoh-transaksi.csv`.
+Format yang didukung: CSV dan XLSX. Kolom wajib: `pelanggan`, `nominal`, `metode`, `waktu`.
+
+Kolom opsional dasar: `kota`, `catatan`. Kolom opsional P1: `order_id`, `customer_id`, `account_age_days`, `refund_count`, `failed_payment_count`, `voucher_code`, `item_count`, `channel`, dan `shipping_method`. Nama kolom umum seperti `nama`, `amount`, `payment method`, dan `tanggal` juga dikenali. Maksimal 50 transaksi per analisis. Contoh ada di `public/contoh-transaksi.csv`.
 
 ## Keamanan dan batas MVP
 
@@ -62,5 +66,5 @@ Format yang didukung: CSV dan XLSX. Kolom wajib: `pelanggan`, `nominal`, `metode
 - Input divalidasi, output Groq diperiksa terhadap schema, dan skor tidak bergantung pada model generatif.
 - Klasifikasi AI adalah alat bantu skrining, bukan bukti hukum atau keputusan otomatis.
 - Rate limit bawaan bersifat best-effort per instance. Sebelum trafik besar, gunakan Redis/KV untuk rate limit global.
-- Laporan terakhir masih disimpan di `localStorage` perangkat pengguna, bukan database cloud.
-- Registrasi, konfirmasi email, login, dan logout sudah tersedia. Billing, histori lintas perangkat, dan dashboard admin pengguna merupakan fase berikutnya.
+- Hasil analisis, transaksi, baseline, review, feedback, dan audit perubahan tersimpan di Supabase serta dilindungi RLS.
+- Registrasi, konfirmasi email, login, logout, billing, histori lintas perangkat, dashboard admin, serta riwayat user untuk admin sudah tersedia.

@@ -5,6 +5,7 @@ import { Bot, Download, RotateCcw, ShieldAlert, ShieldCheck, TriangleAlert } fro
 import { downloadAnalysisPdf } from "@/lib/pdf";
 import type { BatchAnalysis } from "@/types/transaction";
 import { RiskGauge } from "@/components/RiskGauge";
+import { ReviewControls } from "@/components/ReviewControls";
 
 const rupiah = new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 });
 
@@ -76,6 +77,14 @@ export function ResultsPanel({
                           ))}
                         </ul>
                       ) : <p className="no-signals">Tidak ada structured signal pada analisis ini.</p>}
+                      {item.recordId && (
+                        <ReviewControls
+                          transactionId={item.recordId}
+                          initialFeedback={item.review?.feedback}
+                          initialStatus={item.review?.status}
+                          initialNote={item.review?.note}
+                        />
+                      )}
                     </details>
                   </td>
                 </tr>

@@ -1,6 +1,6 @@
-pelanggan,nominal,metode,waktu,kota,catatan
-Siti Rahma,285000,QRIS,2026-07-16 10:24,Bandung,Pesanan hijab 3 pcs
-Budi Santoso,15400000,Transfer bank,2026-07-16 02:13,Jakarta,"Akun baru, minta kirim cepat"
-Nadia Putri,850000,Virtual account,2026-07-16 14:55,Surabaya,
-Rizky Pratama,7200000,Kartu kredit,2026-07-16 03:07,Medan,Alamat berbeda dari pemegang kartu
-Toko Maju Jaya,1250000,Transfer bank,2026-07-16 11:40,Semarang,Pelanggan berulang
+pelanggan,nominal,metode,waktu,kota,catatan,order_id,customer_id,account_age_days,refund_count,failed_payment_count,voucher_code,item_count,channel,shipping_method
+Siti Rahma,285000,QRIS,2026-07-16 10:24,Bandung,Pesanan hijab 3 pcs,ORD-1001,CUS-001,420,0,0,,3,Website,JNE
+Budi Santoso,15400000,Transfer bank,2026-07-16 02:13,Jakarta,"Akun baru, minta kirim cepat",ORD-1002,CUS-002,1,0,3,,12,Marketplace,Instan
+Nadia Putri,850000,Virtual account,2026-07-16 14:55,Surabaya,,ORD-1003,CUS-003,180,0,0,,2,Website,JNT
+Rizky Pratama,7200000,Kartu kredit,2026-07-16 03:07,Medan,Alamat berbeda dari pemegang kartu,ORD-1004,CUS-004,3,2,4,WELCOME50,8,Instagram,Same day
+Toko Maju Jaya,1250000,Transfer bank,2026-07-16 11:40,Semarang,Pelanggan berulang,ORD-1005,CUS-005,760,0,0,,5,WhatsApp,Cargo

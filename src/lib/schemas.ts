@@ -8,6 +8,15 @@ export const transactionSchema = z.object({
   waktu: z.string().min(1).max(80),
   kota: z.string().max(100).optional(),
   catatan: z.string().max(500).optional(),
+  orderId: z.string().max(120).optional(),
+  customerId: z.string().max(120).optional(),
+  accountAgeDays: z.number().int().nonnegative().max(100_000).optional(),
+  refundCount: z.number().int().nonnegative().max(100_000).optional(),
+  failedPaymentCount: z.number().int().nonnegative().max(100_000).optional(),
+  voucherCode: z.string().max(120).optional(),
+  itemCount: z.number().int().positive().max(100_000).optional(),
+  channel: z.string().max(80).optional(),
+  shippingMethod: z.string().max(100).optional(),
 });
 
 export const analyzeRequestSchema = z.object({
@@ -34,6 +43,12 @@ export const riskExplanationSchema = z.object({
   summary: z.object({
     insight: z.string().min(1).max(1200),
   }),
+});
+
+export const transactionReviewSchema = z.object({
+  feedback: z.enum(["UNKNOWN", "SAFE", "PROBLEM"]),
+  status: z.enum(["PENDING", "REVIEWED"]),
+  note: z.string().trim().max(500).optional(),
 });
 
 export type RiskExplanationResponse = z.infer<typeof riskExplanationSchema>;

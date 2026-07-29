@@ -2,9 +2,15 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import { riskSignalSchema } from "@/lib/schemas";
+import { buildBusinessBaseline, type BusinessBaseline } from "@/lib/baseline";
 import type { ExplanationProvider } from "@/lib/groq";
 import type { RiskSignal } from "@/lib/risk-engine";
-import type { BatchAnalysis, RiskLabel } from "@/types/transaction";
+import type {
+  BatchAnalysis,
+  ReviewStatus,
+  RiskLabel,
+  TransactionFeedback,
+} from "@/types/transaction";
 
 type StoredRun = {
   id: string;
@@ -13,6 +19,7 @@ type StoredRun = {
   ai_model: string | null;
   engine_version: string;
   explanation_provider: ExplanationProvider | "legacy";
+  baseline_snapshot: unknown;
   created_at: string;
 };
 
@@ -62,12 +69,68 @@ type StoredTransaction = {
   ai_reason: string | null;
   recommendation: string | null;
   risk_signals: unknown;
+  order_id: string | null;
+  customer_external_id: string | null;
+  account_age_days: number | null;
+  refund_count: number | null;
+  failed_payment_count: number | null;
+  voucher_code: string | null;
+  item_count: number | null;
+  sales_channel: string | null;
+  shipping_method: string | null;
+  feedback_status: TransactionFeedback;
+  review_status: ReviewStatus;
+  review_note: string | null;
+  reviewed_at: string | null;
   created_at: string;
 };
 
 function parseRiskSignals(value: unknown): RiskSignal[] {
   const parsed = riskSignalSchema.array().safeParse(value);
   return parsed.success ? parsed.data : [];
+}
+
+function parseBaseline(value: unknown): BusinessBaseline | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const item = value as Partial<BusinessBaseline>;
+  if (
+    typeof item.sampleSize !== "number"
+    || typeof item.medianAmount !== "number"
+    || typeof item.p90Amount !== "number"
+    || !Array.isArray(item.dominantMethods)
+    || !Array.isArray(item.dominantCities)
+  ) return undefined;
+  return {
+    sampleSize: item.sampleSize,
+    medianAmount: item.medianAmount,
+    p90Amount: item.p90Amount,
+    normalHourStart: typeof item.normalHourStart === "number" ? item.normalHourStart : null,
+    normalHourEnd: typeof item.normalHourEnd === "number" ? item.normalHourEnd : null,
+    dominantMethods: item.dominantMethods.filter((entry): entry is string => typeof entry === "string"),
+    dominantCities: item.dominantCities.filter((entry): entry is string => typeof entry === "string"),
+  };
+}
+
+export async function getBusinessBaseline(userId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("transactions")
+    .select("amount, payment_method, transaction_time, city, status, feedback_status")
+    .eq("user_id", userId)
+    .neq("feedback_status", "PROBLEM")
+    .order("created_at", { ascending: false })
+    .limit(500);
+
+  if (error) throw new Error(`BUSINESS_BASELINE_READ_FAILED:${error.code}`);
+  const transactions = (data ?? [])
+    .filter((row) => row.status !== "TERDETEKSI" || row.feedback_status === "SAFE")
+    .map((row) => ({
+      nominal: Number(row.amount),
+      metode: row.payment_method,
+      waktu: row.transaction_time || "",
+      kota: row.city || undefined,
+    }));
+  return buildBusinessBaseline(transactions);
 }
 
 export async function persistAnalysis(userId: string, analysis: BatchAnalysis) {
@@ -85,6 +148,7 @@ export async function persistAnalysis(userId: string, analysis: BatchAnalysis) {
       ai_model: analysis.meta?.model ?? null,
       engine_version: analysis.meta?.engineVersion ?? "legacy",
       explanation_provider: analysis.meta?.explanationProvider ?? "legacy",
+      baseline_snapshot: analysis.meta?.baseline ?? {},
       source,
     })
     .select("id")
@@ -109,9 +173,21 @@ export async function persistAnalysis(userId: string, analysis: BatchAnalysis) {
     ai_reason: item.reasoning,
     recommendation: item.recommendation,
     risk_signals: item.signals,
+    order_id: item.transaction.orderId ?? null,
+    customer_external_id: item.transaction.customerId ?? null,
+    account_age_days: item.transaction.accountAgeDays ?? null,
+    refund_count: item.transaction.refundCount ?? 0,
+    failed_payment_count: item.transaction.failedPaymentCount ?? 0,
+    voucher_code: item.transaction.voucherCode ?? null,
+    item_count: item.transaction.itemCount ?? null,
+    sales_channel: item.transaction.channel ?? null,
+    shipping_method: item.transaction.shippingMethod ?? null,
   }));
 
-  const { error: transactionError } = await supabase.from("transactions").insert(rows);
+  const { data: insertedTransactions, error: transactionError } = await supabase
+    .from("transactions")
+    .insert(rows)
+    .select("id, input_id");
   if (transactionError) {
     const { error: cleanupError } = await supabase
       .from("analysis_runs")
@@ -128,14 +204,19 @@ export async function persistAnalysis(userId: string, analysis: BatchAnalysis) {
     throw new Error(`TRANSACTION_INSERT_FAILED:${transactionError.code}`);
   }
 
-  return run.id as string;
+  return {
+    analysisId: run.id as string,
+    transactionIds: new Map(
+      (insertedTransactions ?? []).map((row) => [row.input_id as string, row.id as string]),
+    ),
+  };
 }
 
 async function readAnalysis(userId: string, analysisId?: string): Promise<BatchAnalysis | null> {
   const supabase = await createClient();
   let query = supabase
     .from("analysis_runs")
-    .select("id, overall_risk, ai_summary, ai_model, engine_version, explanation_provider, created_at")
+    .select("id, overall_risk, ai_summary, ai_model, engine_version, explanation_provider, baseline_snapshot, created_at")
     .eq("user_id", userId);
 
   query = analysisId
@@ -151,7 +232,7 @@ async function readAnalysis(userId: string, analysisId?: string): Promise<BatchA
   const { data: transactionData, error: transactionError } = await supabase
     .from("transactions")
     .select(
-      "id, input_id, customer_name, amount, payment_method, transaction_time, city, notes, risk_score, status, ai_reason, recommendation, risk_signals, created_at",
+      "id, input_id, customer_name, amount, payment_method, transaction_time, city, notes, risk_score, status, ai_reason, recommendation, risk_signals, order_id, customer_external_id, account_age_days, refund_count, failed_payment_count, voucher_code, item_count, sales_channel, shipping_method, feedback_status, review_status, review_note, reviewed_at, created_at",
     )
     .eq("analysis_id", run.id)
     .eq("user_id", userId)
@@ -161,6 +242,7 @@ async function readAnalysis(userId: string, analysisId?: string): Promise<BatchA
 
   const storedTransactions = (transactionData ?? []) as StoredTransaction[];
   const results = storedTransactions.map((row) => ({
+    recordId: row.id,
     transaction: {
       id: row.input_id || row.id,
       pelanggan: row.customer_name,
@@ -169,12 +251,27 @@ async function readAnalysis(userId: string, analysisId?: string): Promise<BatchA
       waktu: row.transaction_time || row.created_at,
       kota: row.city || undefined,
       catatan: row.notes || undefined,
+      orderId: row.order_id || undefined,
+      customerId: row.customer_external_id || undefined,
+      accountAgeDays: row.account_age_days ?? undefined,
+      refundCount: row.refund_count ?? undefined,
+      failedPaymentCount: row.failed_payment_count ?? undefined,
+      voucherCode: row.voucher_code || undefined,
+      itemCount: row.item_count ?? undefined,
+      channel: row.sales_channel || undefined,
+      shippingMethod: row.shipping_method || undefined,
     },
     riskScore: row.risk_score,
     label: row.status,
     reasoning: row.ai_reason || "Alasan AI tidak tersedia.",
     recommendation: row.recommendation || "Lakukan verifikasi manual sebelum mengambil tindakan.",
     signals: parseRiskSignals(row.risk_signals),
+    review: {
+      feedback: row.feedback_status || "UNKNOWN",
+      status: row.review_status || "PENDING",
+      note: row.review_note || undefined,
+      reviewedAt: row.reviewed_at || undefined,
+    },
   }));
 
   return {
@@ -193,6 +290,7 @@ async function readAnalysis(userId: string, analysisId?: string): Promise<BatchA
       analyzedAt: run.created_at,
       engineVersion: run.engine_version || "legacy",
       explanationProvider: run.explanation_provider || "legacy",
+      baseline: parseBaseline(run.baseline_snapshot),
       persisted: true,
     },
   };

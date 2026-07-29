@@ -1,4 +1,6 @@
-export const RISK_ENGINE_VERSION = "rules-v1.0.0";
+import { hourFromTimestamp, type BusinessBaseline } from "./baseline.ts";
+
+export const RISK_ENGINE_VERSION = "rules-v1.1.0";
 
 export type RiskEngineLabel = "AMAN" | "WASPADA" | "TERDETEKSI";
 export type RiskSeverity = "rendah" | "sedang" | "tinggi";
@@ -20,6 +22,15 @@ export type RiskEngineTransaction = {
   waktu: string;
   kota?: string;
   catatan?: string;
+  orderId?: string;
+  customerId?: string;
+  accountAgeDays?: number;
+  refundCount?: number;
+  failedPaymentCount?: number;
+  voucherCode?: string;
+  itemCount?: number;
+  channel?: string;
+  shippingMethod?: string;
 };
 
 export type ScoredTransaction<T extends RiskEngineTransaction = RiskEngineTransaction> = {
@@ -32,6 +43,7 @@ export type ScoredTransaction<T extends RiskEngineTransaction = RiskEngineTransa
 export type RiskEngineResult<T extends RiskEngineTransaction = RiskEngineTransaction> = {
   engineVersion: typeof RISK_ENGINE_VERSION;
   overallRisk: number;
+  baseline?: BusinessBaseline;
   results: ScoredTransaction<T>[];
 };
 
@@ -64,13 +76,6 @@ function normalizeText(value?: string) {
     .trim()
     .toLocaleLowerCase("id-ID")
     .replace(/\s+/g, " ");
-}
-
-function transactionHour(value: string) {
-  const timeMatch = value.match(/(?:T|\s)(\d{1,2}):\d{2}/);
-  if (!timeMatch) return null;
-  const hour = Number(timeMatch[1]);
-  return Number.isInteger(hour) && hour >= 0 && hour <= 23 ? hour : null;
 }
 
 function median(values: number[]) {
@@ -135,12 +140,13 @@ function evaluateTransaction(
   transaction: RiskEngineTransaction,
   context: BatchContext,
   batchSize: number,
+  baseline?: BusinessBaseline,
 ) {
   const signals: RiskSignal[] = [];
   const customer = normalizeText(transaction.pelanggan);
   const city = normalizeText(transaction.kota);
   const notes = normalizeText(transaction.catatan);
-  const hour = transactionHour(transaction.waktu);
+  const hour = hourFromTimestamp(transaction.waktu);
 
   if (transaction.nominal >= EXTREME_AMOUNT) {
     signals.push(signal(
@@ -279,11 +285,133 @@ function evaluateTransaction(
     ));
   }
 
+  if (
+    baseline
+    && baseline.sampleSize >= 10
+    && baseline.medianAmount > 0
+    && transaction.nominal >= Math.max(1_000_000, baseline.medianAmount * 3)
+    && transaction.nominal > baseline.p90Amount
+  ) {
+    signals.push(signal(
+      "FG-R013",
+      18,
+      "tinggi",
+      "Nominal menyimpang dari baseline toko",
+      "Nominal jauh di atas median dan persentil ke-90 riwayat transaksi bisnis Anda.",
+      "Cocokkan nominal dengan produk, pelanggan, dan bukti pembayaran sebelum diproses.",
+    ));
+  }
+
+  if (
+    baseline
+    && baseline.sampleSize >= 20
+    && hour !== null
+    && baseline.normalHourStart !== null
+    && baseline.normalHourEnd !== null
+    && (hour < baseline.normalHourStart || hour > baseline.normalHourEnd)
+  ) {
+    signals.push(signal(
+      "FG-R014",
+      10,
+      "sedang",
+      "Waktu di luar baseline toko",
+      "Jam transaksi berada di luar rentang waktu normal berdasarkan riwayat bisnis Anda.",
+      "Periksa aktivitas akun dan konteks transaksi pada jam tersebut.",
+    ));
+  }
+
+  const normalizedMethod = normalizeText(transaction.metode);
+  if (
+    baseline
+    && baseline.sampleSize >= 20
+    && baseline.dominantMethods.length > 0
+    && !baseline.dominantMethods.includes(normalizedMethod)
+  ) {
+    signals.push(signal(
+      "FG-R015",
+      8,
+      "rendah",
+      "Metode di luar pola dominan",
+      "Metode pembayaran tidak termasuk metode yang paling sering digunakan pada bisnis Anda.",
+      "Pastikan metode pembayaran tersedia resmi dan dana telah diterima.",
+    ));
+  }
+
+  if (
+    baseline
+    && baseline.sampleSize >= 20
+    && city
+    && baseline.dominantCities.length > 0
+    && !baseline.dominantCities.includes(city)
+  ) {
+    signals.push(signal(
+      "FG-R016",
+      6,
+      "rendah",
+      "Kota di luar pola dominan",
+      "Kota transaksi tidak termasuk wilayah yang paling sering muncul pada riwayat bisnis Anda.",
+      "Verifikasi alamat dan konsistensi tujuan pengiriman.",
+    ));
+  }
+
+  if (
+    transaction.accountAgeDays !== undefined
+    && transaction.accountAgeDays <= 7
+    && transaction.nominal >= 2_000_000
+  ) {
+    signals.push(signal(
+      "FG-R017",
+      14,
+      "sedang",
+      "Akun baru dengan nominal tinggi",
+      "Akun berumur maksimal tujuh hari langsung membuat transaksi bernilai tinggi.",
+      "Verifikasi identitas, pembayaran, dan alamat sebelum memenuhi pesanan.",
+    ));
+  }
+
+  if ((transaction.failedPaymentCount ?? 0) >= 3) {
+    signals.push(signal(
+      "FG-R018",
+      12,
+      "sedang",
+      "Pembayaran gagal berulang",
+      "Terdapat sedikitnya tiga percobaan pembayaran gagal pada konteks transaksi.",
+      "Tinjau metode pembayaran dan pastikan transaksi berhasil pada kanal resmi.",
+    ));
+  }
+
+  if ((transaction.refundCount ?? 0) >= 2) {
+    signals.push(signal(
+      "FG-R019",
+      8,
+      "rendah",
+      "Riwayat refund berulang",
+      "Pelanggan memiliki sedikitnya dua refund pada data yang diberikan.",
+      "Periksa alasan refund sebelumnya dan kebijakan pengembalian toko.",
+    ));
+  }
+
+  if (
+    (transaction.itemCount ?? 0) >= 10
+    && transaction.accountAgeDays !== undefined
+    && transaction.accountAgeDays <= 30
+  ) {
+    signals.push(signal(
+      "FG-R020",
+      10,
+      "sedang",
+      "Pesanan besar dari akun baru",
+      "Akun berumur maksimal 30 hari memesan sedikitnya sepuluh item sekaligus.",
+      "Konfirmasi kebutuhan pesanan dan validitas pembayaran sebelum pengiriman.",
+    ));
+  }
+
   return signals.toSorted((left, right) => right.weight - left.weight || left.code.localeCompare(right.code));
 }
 
 export function scoreTransactions<T extends RiskEngineTransaction>(
   transactions: T[],
+  baseline?: BusinessBaseline,
 ): RiskEngineResult<T> {
   if (transactions.length === 0) {
     throw new Error("RISK_ENGINE_EMPTY_INPUT");
@@ -291,7 +419,7 @@ export function scoreTransactions<T extends RiskEngineTransaction>(
 
   const context = createBatchContext(transactions);
   const results = transactions.map((transaction) => {
-    const signals = evaluateTransaction(transaction, context, transactions.length);
+    const signals = evaluateTransaction(transaction, context, transactions.length, baseline);
     const riskScore = Math.min(
       100,
       BASE_RISK_SCORE + signals.reduce((total, item) => total + item.weight, 0),
@@ -311,7 +439,7 @@ export function scoreTransactions<T extends RiskEngineTransaction>(
   return {
     engineVersion: RISK_ENGINE_VERSION,
     overallRisk,
+    baseline,
     results,
   };
 }
-

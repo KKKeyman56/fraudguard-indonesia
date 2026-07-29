@@ -40,6 +40,10 @@ export function AnalyzeWorkspace({ quota }: { quota: AnalysisQuota }) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const nominal = Number(form.get("nominal"));
+    const optionalInteger = (name: string) => {
+      const raw = String(form.get(name) || "").trim();
+      return raw ? Number(raw) : undefined;
+    };
     if (!Number.isFinite(nominal) || nominal < 0) return setMessage("Nominal harus berupa angka positif.");
     const item: Transaction = {
       id: `MAN-${Date.now()}`,
@@ -49,6 +53,15 @@ export function AnalyzeWorkspace({ quota }: { quota: AnalysisQuota }) {
       waktu: String(form.get("waktu") || "").trim(),
       kota: String(form.get("kota") || "").trim() || undefined,
       catatan: String(form.get("catatan") || "").trim() || undefined,
+      orderId: String(form.get("orderId") || "").trim() || undefined,
+      customerId: String(form.get("customerId") || "").trim() || undefined,
+      accountAgeDays: optionalInteger("accountAgeDays"),
+      refundCount: optionalInteger("refundCount"),
+      failedPaymentCount: optionalInteger("failedPaymentCount"),
+      voucherCode: String(form.get("voucherCode") || "").trim() || undefined,
+      itemCount: optionalInteger("itemCount"),
+      channel: String(form.get("channel") || "").trim() || undefined,
+      shippingMethod: String(form.get("shippingMethod") || "").trim() || undefined,
     };
     if (!item.pelanggan || !item.metode || !item.waktu) return setMessage("Lengkapi pelanggan, metode, dan waktu.");
     if (transactions.length >= 50) return setMessage("Maksimal 50 transaksi per analisis.");
@@ -96,7 +109,7 @@ export function AnalyzeWorkspace({ quota }: { quota: AnalysisQuota }) {
             <input ref={inputRef} hidden type="file" accept=".csv,.xlsx" onChange={(event) => void handleFile(event.target.files?.[0])} />
             <button className="button button-ghost" onClick={() => inputRef.current?.click()}>Pilih file</button>
             <button className="text-button" onClick={() => setTransactions(createSampleTransactions())}><Sparkles size={16} /> Gunakan 5 data contoh</button>
-            <small>Kolom wajib: pelanggan, nominal, metode, waktu. Opsional: kota, catatan. Hindari data sensitif seperti nomor kartu, PIN, atau kata sandi.</small>
+            <small>Kolom wajib: pelanggan, nominal, metode, waktu. Kolom P1 opsional: order ID, customer ID, umur akun, refund, pembayaran gagal, voucher, jumlah item, channel, dan pengiriman.</small>
           </div>
         ) : (
           <form className="manual-form" onSubmit={addManual}>
@@ -106,6 +119,20 @@ export function AnalyzeWorkspace({ quota }: { quota: AnalysisQuota }) {
             <label>Waktu<input name="waktu" type="datetime-local" required /></label>
             <label>Kota<input name="kota" placeholder="Jakarta" /></label>
             <label className="span-2">Catatan<textarea name="catatan" rows={3} placeholder="Misalnya: akun baru, minta kirim cepat" /></label>
+            <details className="advanced-fields span-2">
+              <summary>Tambah konteks transaksi (opsional, hasil lebih akurat)</summary>
+              <div className="advanced-grid">
+                <label>Order ID<input name="orderId" placeholder="ORD-2026-001" /></label>
+                <label>Customer ID<input name="customerId" placeholder="CUS-001" /></label>
+                <label>Umur akun (hari)<input name="accountAgeDays" type="number" min="0" step="1" /></label>
+                <label>Jumlah refund<input name="refundCount" type="number" min="0" step="1" /></label>
+                <label>Pembayaran gagal<input name="failedPaymentCount" type="number" min="0" step="1" /></label>
+                <label>Jumlah item<input name="itemCount" type="number" min="1" step="1" /></label>
+                <label>Kode voucher<input name="voucherCode" placeholder="PROMO10" /></label>
+                <label>Channel<input name="channel" placeholder="Website / Marketplace" /></label>
+                <label className="span-2">Metode pengiriman<input name="shippingMethod" placeholder="JNE / Same day / Instan" /></label>
+              </div>
+            </details>
             <button className="button span-2" type="submit"><Plus size={18} /> Tambahkan transaksi</button>
           </form>
         )}
