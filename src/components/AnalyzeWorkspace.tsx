@@ -16,14 +16,14 @@ export function AnalyzeWorkspace({ quota }: { quota: AnalysisQuota }) {
   const [tab, setTab] = useState<"file" | "manual">("file");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [aiReady, setAiReady] = useState<boolean | null>(null);
+  const [explanationReady, setExplanationReady] = useState<boolean | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch("/api/health", { cache: "no-store" })
       .then((response) => response.json())
-      .then((data: { aiConfigured?: boolean }) => setAiReady(Boolean(data.aiConfigured)))
-      .catch(() => setAiReady(null));
+      .then((data: { explanationConfigured?: boolean }) => setExplanationReady(Boolean(data.explanationConfigured)))
+      .catch(() => setExplanationReady(null));
   }, []);
 
   async function handleFile(file?: File) {
@@ -83,7 +83,7 @@ export function AnalyzeWorkspace({ quota }: { quota: AnalysisQuota }) {
   return (
     <div className="analyze-layout">
       <section className="neon-card input-card">
-        {aiReady === false && <div className="alert" role="status">AI belum diaktifkan. Administrator perlu menambahkan GROQ_API_KEY di Vercel.</div>}
+        {explanationReady === false && <div className="alert" role="status">Risk Engine siap digunakan. Penjelasan akan dibuat oleh fallback lokal karena Groq belum aktif.</div>}
         <div className="tabs" role="tablist">
           <button className={tab === "file" ? "active" : ""} onClick={() => setTab("file")} role="tab"><Upload size={17} /> Upload CSV/Excel</button>
           <button className={tab === "manual" ? "active" : ""} onClick={() => setTab("manual")} role="tab"><Plus size={17} /> Input manual</button>
@@ -121,8 +121,8 @@ export function AnalyzeWorkspace({ quota }: { quota: AnalysisQuota }) {
         {!transactions.length ? <div className="empty-state">Belum ada data. Upload file atau isi transaksi manual.</div> : (
           <div className="queue-list">{transactions.map((item) => <div className="queue-item" key={item.id}><div><strong>{item.pelanggan}</strong><span>{rupiah.format(item.nominal)} • {item.metode}</span></div><button aria-label={`Hapus ${item.pelanggan}`} onClick={() => setTransactions(transactions.filter((row) => row.id !== item.id))}><X size={16} /></button></div>)}</div>
         )}
-        <button className="button analyze-button" disabled={!transactions.length || loading || aiReady === false || (quota.remaining !== null && transactions.length > quota.remaining)} onClick={() => void analyze()}>
-          {loading ? <><LoaderCircle className="spin" size={19} /> AI sedang menganalisis...</> : <><Send size={18} /> Analisis dengan AI</>}
+        <button className="button analyze-button" disabled={!transactions.length || loading || (quota.remaining !== null && transactions.length > quota.remaining)} onClick={() => void analyze()}>
+          {loading ? <><LoaderCircle className="spin" size={19} /> Risk Engine sedang memeriksa...</> : <><Send size={18} /> Analisis risiko</>}
         </button>
         {quota.remaining !== null && transactions.length > quota.remaining && <p className="quota-warning">Sisa kuota hanya {quota.remaining.toLocaleString("id-ID")} transaksi. Kurangi antrean atau upgrade paket.</p>}
         {loading && <p className="loading-note">Biasanya selesai dalam beberapa detik. Jangan tutup halaman ini.</p>}

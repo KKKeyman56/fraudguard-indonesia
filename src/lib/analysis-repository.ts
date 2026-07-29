@@ -1,6 +1,9 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { riskSignalSchema } from "@/lib/schemas";
+import type { ExplanationProvider } from "@/lib/groq";
+import type { RiskSignal } from "@/lib/risk-engine";
 import type { BatchAnalysis, RiskLabel } from "@/types/transaction";
 
 type StoredRun = {
@@ -8,6 +11,8 @@ type StoredRun = {
   overall_risk: number;
   ai_summary: string | null;
   ai_model: string | null;
+  engine_version: string;
+  explanation_provider: ExplanationProvider | "legacy";
   created_at: string;
 };
 
@@ -25,6 +30,8 @@ export type AnalysisHistoryItem = {
   overallRisk: number;
   aiSummary: string;
   aiModel: string;
+  engineVersion: string;
+  explanationProvider: ExplanationProvider | "legacy";
   source: "manual" | "file";
   createdAt: string;
   total: number;
@@ -54,8 +61,14 @@ type StoredTransaction = {
   status: RiskLabel;
   ai_reason: string | null;
   recommendation: string | null;
+  risk_signals: unknown;
   created_at: string;
 };
+
+function parseRiskSignals(value: unknown): RiskSignal[] {
+  const parsed = riskSignalSchema.array().safeParse(value);
+  return parsed.success ? parsed.data : [];
+}
 
 export async function persistAnalysis(userId: string, analysis: BatchAnalysis) {
   const supabase = await createClient();
@@ -70,6 +83,8 @@ export async function persistAnalysis(userId: string, analysis: BatchAnalysis) {
       overall_risk: analysis.summary.overallRisk,
       ai_summary: analysis.summary.aiInsight,
       ai_model: analysis.meta?.model ?? null,
+      engine_version: analysis.meta?.engineVersion ?? "legacy",
+      explanation_provider: analysis.meta?.explanationProvider ?? "legacy",
       source,
     })
     .select("id")
@@ -93,6 +108,7 @@ export async function persistAnalysis(userId: string, analysis: BatchAnalysis) {
     status: item.label,
     ai_reason: item.reasoning,
     recommendation: item.recommendation,
+    risk_signals: item.signals,
   }));
 
   const { error: transactionError } = await supabase.from("transactions").insert(rows);
@@ -119,7 +135,7 @@ async function readAnalysis(userId: string, analysisId?: string): Promise<BatchA
   const supabase = await createClient();
   let query = supabase
     .from("analysis_runs")
-    .select("id, overall_risk, ai_summary, ai_model, created_at")
+    .select("id, overall_risk, ai_summary, ai_model, engine_version, explanation_provider, created_at")
     .eq("user_id", userId);
 
   query = analysisId
@@ -135,7 +151,7 @@ async function readAnalysis(userId: string, analysisId?: string): Promise<BatchA
   const { data: transactionData, error: transactionError } = await supabase
     .from("transactions")
     .select(
-      "id, input_id, customer_name, amount, payment_method, transaction_time, city, notes, risk_score, status, ai_reason, recommendation, created_at",
+      "id, input_id, customer_name, amount, payment_method, transaction_time, city, notes, risk_score, status, ai_reason, recommendation, risk_signals, created_at",
     )
     .eq("analysis_id", run.id)
     .eq("user_id", userId)
@@ -158,6 +174,7 @@ async function readAnalysis(userId: string, analysisId?: string): Promise<BatchA
     label: row.status,
     reasoning: row.ai_reason || "Alasan AI tidak tersedia.",
     recommendation: row.recommendation || "Lakukan verifikasi manual sebelum mengambil tindakan.",
+    signals: parseRiskSignals(row.risk_signals),
   }));
 
   return {
@@ -174,6 +191,8 @@ async function readAnalysis(userId: string, analysisId?: string): Promise<BatchA
       analysisId: run.id,
       model: run.ai_model || "FraudGuard AI",
       analyzedAt: run.created_at,
+      engineVersion: run.engine_version || "legacy",
+      explanationProvider: run.explanation_provider || "legacy",
       persisted: true,
     },
   };
@@ -209,7 +228,7 @@ export async function listAnalysisHistory(
 
   const { data, error } = await supabase
     .from("analysis_runs")
-    .select("id, overall_risk, ai_summary, ai_model, source, created_at")
+    .select("id, overall_risk, ai_summary, ai_model, engine_version, explanation_provider, source, created_at")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .range(from, from + safePageSize - 1);
@@ -247,6 +266,8 @@ export async function listAnalysisHistory(
       overallRisk: run.overall_risk,
       aiSummary: run.ai_summary || "Ringkasan AI tidak tersedia.",
       aiModel: run.ai_model || "FraudGuard AI",
+      engineVersion: run.engine_version || "legacy",
+      explanationProvider: run.explanation_provider || "legacy",
       source: run.source === "manual" ? "manual" : "file",
       createdAt: run.created_at,
       ...(countsByRun.get(run.id) ?? { total: 0, aman: 0, waspada: 0, terdeteksi: 0 }),

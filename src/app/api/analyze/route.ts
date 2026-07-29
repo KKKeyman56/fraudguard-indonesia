@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { analyzeWithGroq } from "@/lib/groq";
+import { explainRiskWithGroq } from "@/lib/groq";
+import { scoreTransactions } from "@/lib/risk-engine";
 import { analyzeRequestSchema } from "@/lib/schemas";
 import type { AnalysisResult, BatchAnalysis } from "@/types/transaction";
 import { getAccountStatus, getVerifiedClaims } from "@/lib/auth";
@@ -17,12 +18,6 @@ const attempts = new Map<string, { count: number; resetAt: number }>();
 const WINDOW_MS = 60_000;
 const MAX_REQUESTS = 8;
 
-function labelFromScore(score: number): AnalysisResult["label"] {
-  if (score >= 70) return "TERDETEKSI";
-  if (score >= 40) return "WASPADA";
-  return "AMAN";
-}
-
 function isRateLimited(ip: string) {
   const now = Date.now();
   const entry = attempts.get(ip);
@@ -35,31 +30,41 @@ function isRateLimited(ip: string) {
 }
 
 export async function POST(request: NextRequest) {
+  const requestId = request.headers.get("x-request-id") || crypto.randomUUID();
+  const json = (
+    body: object,
+    status: number,
+    headers: Record<string, string> = {},
+  ) => NextResponse.json(body, {
+    status,
+    headers: { ...headers, "X-Request-ID": requestId },
+  });
+
   const claims = await getVerifiedClaims();
   if (!claims) {
-    return NextResponse.json(
+    return json(
       { error: "Silakan masuk untuk menggunakan analisis AI.", code: "UNAUTHORIZED" },
-      { status: 401 },
+      401,
     );
   }
   if ((await getAccountStatus(String(claims.sub))) !== "active") {
-    return NextResponse.json(
+    return json(
       { error: "Akun Anda sedang dinonaktifkan. Hubungi administrator FraudGuard.", code: "ACCOUNT_SUSPENDED" },
-      { status: 403 },
+      403,
     );
   }
   const contentLength = Number(request.headers.get("content-length") || 0);
   if (contentLength > 256_000) {
-    return NextResponse.json(
+    return json(
       { error: "Ukuran data terlalu besar. Kurangi jumlah atau panjang catatan transaksi.", code: "PAYLOAD_TOO_LARGE" },
-      { status: 413 },
+      413,
     );
   }
   const userKey = typeof claims.sub === "string" ? claims.sub : "unknown";
   if (isRateLimited(userKey)) {
-    return NextResponse.json(
+    return json(
       { error: "Terlalu banyak permintaan. Tunggu satu menit lalu coba lagi.", code: "RATE_LIMITED" },
-      { status: 429 },
+      429,
     );
   }
 
@@ -67,20 +72,20 @@ export async function POST(request: NextRequest) {
     const raw = await request.json();
     const parsed = analyzeRequestSchema.safeParse(raw);
     if (!parsed.success) {
-      return NextResponse.json(
+      return json(
         { error: "Data transaksi tidak valid atau melebihi 50 baris.", code: "INVALID_INPUT" },
-        { status: 400 },
+        400,
       );
     }
 
     let quota;
     try {
       quota = await getAnalysisQuota();
-    } catch (quotaError) {
-      console.error("FraudGuard quota check error", quotaError);
-      return NextResponse.json(
+    } catch {
+      console.error(JSON.stringify({ level: "error", event: "quota_check_failed", requestId }));
+      return json(
         { error: "Kuota akun belum dapat diperiksa. Silakan coba lagi.", code: "QUOTA_UNAVAILABLE" },
-        { status: 503 },
+        503,
       );
     }
     const requestedTransactions = parsed.data.transactions.length;
@@ -89,12 +94,12 @@ export async function POST(request: NextRequest) {
       && quota.remaining !== null
       && requestedTransactions > quota.remaining
     ) {
-      return NextResponse.json(
+      return json(
         {
           error: `Sisa kuota paket ${quota.plan.toUpperCase()} hanya ${quota.remaining.toLocaleString("id-ID")} transaksi. Kurangi jumlah data atau buka halaman Paket untuk upgrade.`,
           code: "QUOTA_EXCEEDED",
         },
-        { status: 402 },
+        402,
       );
     }
 
@@ -106,43 +111,45 @@ export async function POST(request: NextRequest) {
         reservationError instanceof Error
         && reservationError.message === "TRANSACTION_QUOTA_EXCEEDED"
       ) {
-        return NextResponse.json(
+        return json(
           {
             error: "Kuota transaksi berubah karena ada analisis lain yang sedang berjalan. Coba lagi setelah proses tersebut selesai.",
             code: "QUOTA_EXCEEDED",
           },
-          { status: 402 },
+          402,
         );
       }
-      console.error("FraudGuard quota reservation error", reservationError);
-      return NextResponse.json(
+      console.error(JSON.stringify({ level: "error", event: "quota_reservation_failed", requestId }));
+      return json(
         { error: "Kuota transaksi belum dapat diamankan. Silakan coba lagi.", code: "QUOTA_UNAVAILABLE" },
-        { status: 503 },
+        503,
       );
     }
 
     const releaseReservation = async () => {
       try {
         await releaseAnalysisQuota(reservationId);
-      } catch (releaseError) {
-        console.error("FraudGuard quota release error", releaseError);
+      } catch {
+        console.error(JSON.stringify({ level: "error", event: "quota_release_failed", requestId }));
       }
     };
 
     try {
-      const { data, model } = await analyzeWithGroq(parsed.data.transactions);
-      const transactionMap = new Map(parsed.data.transactions.map((item) => [item.id, item]));
-      const results: AnalysisResult[] = data.results.map((item) => ({
-        transaction: transactionMap.get(item.id)!,
-        riskScore: item.riskScore,
-        label: labelFromScore(item.riskScore),
-        reasoning: item.reasoning,
-        recommendation: item.recommendation,
-      }));
-
-      const overallRisk = Math.round(
-        results.reduce((total, item) => total + item.riskScore, 0) / results.length,
-      );
+      const risk = scoreTransactions(parsed.data.transactions);
+      const explanation = await explainRiskWithGroq(risk);
+      const explanationById = new Map(explanation.results.map((item) => [item.id, item]));
+      const results: AnalysisResult[] = risk.results.map((item) => {
+        const explained = explanationById.get(item.transaction.id);
+        if (!explained) throw new Error("EXPLANATION_RESULT_MISMATCH");
+        return {
+          transaction: item.transaction,
+          riskScore: item.riskScore,
+          label: item.label,
+          reasoning: explained.reasoning,
+          recommendation: explained.recommendation,
+          signals: item.signals,
+        };
+      });
 
       const response: BatchAnalysis = {
         results,
@@ -151,10 +158,15 @@ export async function POST(request: NextRequest) {
           aman: results.filter((item) => item.label === "AMAN").length,
           waspada: results.filter((item) => item.label === "WASPADA").length,
           terdeteksi: results.filter((item) => item.label === "TERDETEKSI").length,
-          overallRisk,
-          aiInsight: data.summary.aiInsight,
+          overallRisk: risk.overallRisk,
+          aiInsight: explanation.insight,
         },
-        meta: { model, analyzedAt: new Date().toISOString() },
+        meta: {
+          model: explanation.model,
+          analyzedAt: new Date().toISOString(),
+          engineVersion: risk.engineVersion,
+          explanationProvider: explanation.provider,
+        },
       };
 
       try {
@@ -163,8 +175,8 @@ export async function POST(request: NextRequest) {
           analysisId: await persistAnalysis(userKey, response),
           persisted: true,
         };
-      } catch (persistenceError) {
-        console.error("FraudGuard persistence error", persistenceError);
+      } catch {
+        console.error(JSON.stringify({ level: "error", event: "analysis_persistence_failed", requestId }));
         response.meta = {
           ...response.meta!,
           persisted: false,
@@ -174,23 +186,31 @@ export async function POST(request: NextRequest) {
       }
 
       await releaseReservation();
-      return NextResponse.json(response, { headers: { "Cache-Control": "no-store" } });
+      console.info(JSON.stringify({
+        level: "info",
+        event: "risk_analysis_completed",
+        requestId,
+        userId: userKey,
+        transactionCount: results.length,
+        overallRisk: risk.overallRisk,
+        engineVersion: risk.engineVersion,
+        explanationProvider: explanation.provider,
+      }));
+      return json(response, 200, { "Cache-Control": "no-store" });
     } catch (analysisError) {
       await releaseReservation();
       throw analysisError;
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : "UNKNOWN";
-    if (message === "GROQ_API_KEY_MISSING") {
-      return NextResponse.json(
-        { error: "Layanan AI belum diaktifkan oleh administrator.", code: "AI_NOT_CONFIGURED" },
-        { status: 503 },
-      );
-    }
-    console.error("FraudGuard analyze error", error);
-    return NextResponse.json(
-      { error: "AI sedang tidak dapat dihubungi. Data Anda belum dianalisis; silakan coba lagi.", code: "AI_UNAVAILABLE" },
-      { status: 502 },
+    console.error(JSON.stringify({
+      level: "error",
+      event: "risk_analysis_failed",
+      requestId,
+      error: error instanceof Error ? error.name : "UnknownError",
+    }));
+    return json(
+      { error: "Analisis belum dapat diproses. Silakan coba lagi.", code: "ANALYSIS_UNAVAILABLE", requestId },
+      500,
     );
   }
 }

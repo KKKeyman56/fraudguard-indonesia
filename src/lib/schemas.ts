@@ -14,20 +14,26 @@ export const analyzeRequestSchema = z.object({
   transactions: z.array(transactionSchema).min(1).max(50),
 });
 
-export const aiResponseSchema = z.object({
+export const riskSignalSchema = z.object({
+  code: z.string().regex(/^FG-R\d{3}$/),
+  weight: z.number().int().positive().max(100),
+  severity: z.enum(["rendah", "sedang", "tinggi"]),
+  title: z.string().min(1).max(160),
+  reason: z.string().min(1).max(500),
+  recommendation: z.string().min(1).max(500),
+});
+
+export const riskExplanationSchema = z.object({
   results: z.array(
     z.object({
-      id: z.string(),
-      riskScore: z.number().int().min(0).max(100),
-      label: z.enum(["AMAN", "WASPADA", "TERDETEKSI"]),
+      ref: z.string().regex(/^TX-\d{3}$/),
       reasoning: z.string().min(1).max(800),
       recommendation: z.string().min(1).max(600),
     }),
   ),
   summary: z.object({
-    overallRisk: z.number().int().min(0).max(100),
-    aiInsight: z.string().min(1).max(1200),
+    insight: z.string().min(1).max(1200),
   }),
 });
 
-export type AiResponse = z.infer<typeof aiResponseSchema>;
+export type RiskExplanationResponse = z.infer<typeof riskExplanationSchema>;

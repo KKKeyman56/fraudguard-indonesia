@@ -62,7 +62,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Prom
                 <article className="neon-card history-card" key={item.id}>
                   <div className="history-score" data-risk={label.toLowerCase()}><strong>{item.overallRisk}</strong><span>RISIKO / 100</span></div>
                   <div className="history-detail">
-                    <div className="history-meta"><time dateTime={item.createdAt}>{formatDate(item.createdAt)} WIB</time><span>{item.source === "manual" ? "Input manual" : "Upload file"}</span><span>{item.total} transaksi</span><span>{item.aiModel}</span></div>
+                    <div className="history-meta"><time dateTime={item.createdAt}>{formatDate(item.createdAt)} WIB</time><span>{item.source === "manual" ? "Input manual" : "Upload file"}</span><span>{item.total} transaksi</span><span>{item.engineVersion}</span><span>{item.explanationProvider === "fallback" ? "Fallback lokal" : item.aiModel}</span></div>
                     <div className={`status ${label.toLowerCase()}`}><ShieldCheck size={13} /> {label}</div>
                     <p>{item.aiSummary}</p>
                     <div className="history-counts"><span className="safe">{item.aman} aman</span><span className="warning">{item.waspada} waspada</span><span className="danger">{item.terdeteksi} terdeteksi</span></div>

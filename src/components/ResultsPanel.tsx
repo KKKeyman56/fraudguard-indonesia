@@ -17,6 +17,14 @@ export function ResultsPanel({
   onReset?: () => void;
   showReportLink?: boolean;
 }) {
+  const engineVersion = analysis.meta?.engineVersion || "legacy";
+  const explanationProvider = analysis.meta?.explanationProvider || "legacy";
+  const providerLabel = explanationProvider === "groq"
+    ? "GROQ EXPLAIN"
+    : explanationProvider === "fallback"
+      ? "LOCAL FALLBACK"
+      : "LEGACY";
+
   return (
     <section className="results-stack" aria-live="polite">
       {analysis.meta?.persistenceWarning && <div className="alert" role="alert">{analysis.meta.persistenceWarning}</div>}
@@ -33,9 +41,9 @@ export function ResultsPanel({
           <RiskGauge score={analysis.summary.overallRisk} />
         </article>
         <article className="neon-card insight-card">
-          <div className="card-title"><Bot aria-hidden="true" /><div><span className="eyebrow">AI INSIGHT</span><h2>Ringkasan untuk pemilik usaha</h2></div></div>
+          <div className="card-title"><Bot aria-hidden="true" /><div><span className="eyebrow">EXPLANATION LAYER // {providerLabel}</span><h2>Ringkasan risiko</h2></div></div>
           <p>{analysis.summary.aiInsight}</p>
-          <small>Hasil AI adalah alat bantu skrining. Verifikasi manusia tetap diperlukan sebelum membatalkan atau memblokir transaksi.</small>
+          <small>Skor dihitung oleh {engineVersion}. Lapisan penjelasan tidak dapat mengubah skor. Verifikasi manusia tetap diperlukan sebelum membatalkan atau memblokir transaksi.</small>
         </article>
       </div>
 
@@ -52,7 +60,24 @@ export function ResultsPanel({
                   <td>{item.transaction.metode}<small>{item.transaction.waktu}</small></td>
                   <td><strong>{item.riskScore}</strong>/100</td>
                   <td><span className={`status ${item.label.toLowerCase()}`}>{item.label === "AMAN" ? <ShieldCheck size={14} /> : item.label === "WASPADA" ? <TriangleAlert size={14} /> : <ShieldAlert size={14} />}{item.label}</span></td>
-                  <td><details><summary>Lihat alasan</summary><p><strong>Alasan:</strong> {item.reasoning}</p><p><strong>Saran:</strong> {item.recommendation}</p></details></td>
+                  <td>
+                    <details>
+                      <summary>Lihat alasan &amp; signals</summary>
+                      <p><strong>Penjelasan:</strong> {item.reasoning}</p>
+                      <p><strong>Saran:</strong> {item.recommendation}</p>
+                      {(item.signals ?? []).length > 0 ? (
+                        <ul className="risk-signal-list">
+                          {(item.signals ?? []).map((signal) => (
+                            <li key={signal.code}>
+                              <div><code>{signal.code}</code><span className={`signal-severity ${signal.severity}`}>{signal.severity}</span><strong>+{signal.weight}</strong></div>
+                              <b>{signal.title}</b>
+                              <span>{signal.reason}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : <p className="no-signals">Tidak ada structured signal pada analisis ini.</p>}
+                    </details>
+                  </td>
                 </tr>
               ))}
             </tbody>

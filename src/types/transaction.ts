@@ -1,3 +1,6 @@
+import type { ExplanationProvider } from "@/lib/groq";
+import type { RiskSignal } from "@/lib/risk-engine";
+
 export type RiskLabel = "AMAN" | "WASPADA" | "TERDETEKSI";
 
 export interface Transaction {
@@ -16,6 +19,7 @@ export interface AnalysisResult {
   label: RiskLabel;
   reasoning: string;
   recommendation: string;
+  signals: RiskSignal[];
 }
 
 export interface BatchAnalysis {
@@ -32,6 +36,8 @@ export interface BatchAnalysis {
     analysisId?: string;
     model: string;
     analyzedAt: string;
+    engineVersion: string;
+    explanationProvider: ExplanationProvider | "legacy";
     persisted?: boolean;
     persistenceWarning?: string;
   };
