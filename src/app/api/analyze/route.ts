@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
           total: results.length,
           aman: results.filter((item) => item.label === "AMAN").length,
           waspada: results.filter((item) => item.label === "WASPADA").length,
-          terdeteksi: results.filter((item) => item.label === "TERDETEKSI").length,
+          risikoTinggi: results.filter((item) => item.label === "RISIKO TINGGI").length,
           overallRisk: risk.overallRisk,
           aiInsight: explanation.insight,
         },

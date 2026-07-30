@@ -24,6 +24,23 @@ function Fields({ next, mode }: { next: string; mode: "login" | "signup" }) {
       <input type="hidden" name="next" value={next} />
       <label>Email bisnis<input name="email" type="email" autoComplete="email" placeholder="nama@tokomu.id" required /></label>
       <label>Kata sandi<input name="password" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} minLength={8} maxLength={72} placeholder="Minimal 8 karakter" required /></label>
+      {mode === "signup" && (
+        <fieldset className="consent-group">
+          <legend>Persetujuan paid beta</legend>
+          <label className="consent-check">
+            <input name="termsAccepted" type="checkbox" required />
+            <span>Saya telah membaca dan menyetujui <a href="/terms" target="_blank">Syarat & Ketentuan</a>.</span>
+          </label>
+          <label className="consent-check">
+            <input name="privacyAccepted" type="checkbox" required />
+            <span>Saya telah membaca <a href="/privacy" target="_blank">Kebijakan Privasi</a> dan memahami cara data diproses.</span>
+          </label>
+          <label className="consent-check">
+            <input name="screeningConsent" type="checkbox" required />
+            <span>Saya memahami FraudGuard adalah alat skrining risiko. Hasilnya bukan bukti fraud dan keputusan final wajib diverifikasi manusia.</span>
+          </label>
+        </fieldset>
+      )}
     </>
   );
 }
@@ -47,7 +64,7 @@ export function AuthForm({ next }: { next: string }) {
         <Fields next={next} mode={mode} />
         <SubmitButton mode={mode} />
       </form>
-      <p className="auth-note">Dengan melanjutkan, Anda menyetujui penggunaan FraudGuard untuk rekomendasi risiko transaksi. Keputusan final tetap di tangan Anda.</p>
+      <p className="auth-note">FraudGuard memberi rekomendasi skrining risiko. Keputusan final tetap di tangan Anda.</p>
     </div>
   );
 }

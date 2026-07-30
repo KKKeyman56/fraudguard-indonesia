@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { DATA_PROCESSING_CONSENT_VERSION, LEGAL_VERSION } from "@/lib/legal-versions";
 
 export type AuthState = { error?: string; success?: string };
 
@@ -34,6 +35,11 @@ function readCredentials(formData: FormData) {
   });
 }
 
+function hasSignupConsent(formData: FormData) {
+  return ["termsAccepted", "privacyAccepted", "screeningConsent"]
+    .every((name) => formData.get(name) === "on");
+}
+
 export async function login(_: AuthState, formData: FormData): Promise<AuthState> {
   const parsed = readCredentials(formData);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message || "Data login tidak valid." };
@@ -51,17 +57,31 @@ export async function login(_: AuthState, formData: FormData): Promise<AuthState
 export async function signup(_: AuthState, formData: FormData): Promise<AuthState> {
   const parsed = readCredentials(formData);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message || "Data pendaftaran tidak valid." };
+  if (!hasSignupConsent(formData)) {
+    return { error: "Semua persetujuan wajib diisi untuk membuat akun paid beta." };
+  }
 
   const requestHeaders = await headers();
   const host = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host");
   const protocol = requestHeaders.get("x-forwarded-proto") || (host?.includes("localhost") ? "http" : "https");
   const origin = host ? `${protocol}://${host}` : "https://fraudguard-indonesia.vercel.app";
   const next = safeNext(parsed.data.next);
+  const consentedAt = new Date().toISOString();
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
-    options: { emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}` },
+    options: {
+      emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
+      data: {
+        terms_accepted: true,
+        privacy_accepted: true,
+        screening_consent: true,
+        legal_version: LEGAL_VERSION,
+        screening_consent_version: DATA_PROCESSING_CONSENT_VERSION,
+        consented_at: consentedAt,
+      },
+    },
   });
 
   if (error) return { error: friendlyAuthError(error.message) };

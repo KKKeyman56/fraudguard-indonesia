@@ -48,7 +48,7 @@ test("kombinasi nominal ekstrem dan dini hari menghasilkan sinyal terstruktur", 
   const transaction = result.results[0];
   const codes = transaction.signals.map((signal) => signal.code);
 
-  assert.equal(transaction.label, "TERDETEKSI");
+  assert.equal(transaction.label, "RISIKO TINGGI");
   assert.ok(codes.includes("FG-R001"));
   assert.ok(codes.includes("FG-R003"));
   assert.ok(codes.includes("FG-R006"));

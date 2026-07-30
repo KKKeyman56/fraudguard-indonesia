@@ -113,7 +113,7 @@ export async function getAdminUserDetail(userId: string) {
     supabase.from("analysis_runs").select("id, overall_risk, ai_model, source, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(10),
     supabase.from("transactions").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "AMAN"),
     supabase.from("transactions").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "WASPADA"),
-    supabase.from("transactions").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "TERDETEKSI"),
+    supabase.from("transactions").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "RISIKO TINGGI"),
   ]);
   const firstError = [userResult.error, runsResult.error, safeResult.error, warningResult.error, detectedResult.error].find(Boolean);
   if (firstError) throw new Error(`ADMIN_USER_DETAIL_READ_FAILED:${firstError.code}`);
@@ -142,7 +142,7 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
     supabase.from("transactions").select("id", { count: "exact", head: true }),
     supabase.from("transactions").select("id", { count: "exact", head: true }).eq("status", "AMAN"),
     supabase.from("transactions").select("id", { count: "exact", head: true }).eq("status", "WASPADA"),
-    supabase.from("transactions").select("id", { count: "exact", head: true }).eq("status", "TERDETEKSI"),
+    supabase.from("transactions").select("id", { count: "exact", head: true }).eq("status", "RISIKO TINGGI"),
     supabase.from("analysis_runs").select("id, user_id, overall_risk, ai_model, source, created_at").order("created_at", { ascending: false }).limit(8),
     supabase.from("profiles").select("id, email, role, created_at").order("created_at", { ascending: false }).limit(6),
   ]);

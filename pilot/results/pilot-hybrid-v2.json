@@ -1,0 +1,91 @@
+{
+  "pilotId": "synthetic-labeled-pilot-v1",
+  "generatedAt": "2026-07-30T14:03:16.473Z",
+  "engineVersion": "hybrid-v2.0.0",
+  "threshold": 70,
+  "dataset": {
+    "type": "synthetic-curated",
+    "sampleSize": 360,
+    "labelDefinition": "Label skenario yang ditetapkan sebelum scoring: aman atau bermasalah.",
+    "warning": "Hasil ini menguji perilaku teknis engine, bukan akurasi pada transaksi UMKM nyata."
+  },
+  "evaluation": {
+    "sampleSize": 360,
+    "positives": 180,
+    "negatives": 180,
+    "truePositive": 120,
+    "falsePositive": 0,
+    "trueNegative": 180,
+    "falseNegative": 60,
+    "precision": 1,
+    "recall": 0.6667,
+    "f1": 0.8,
+    "falsePositiveRate": 0,
+    "prAuc": 0.9441,
+    "brierScore": 0.1141,
+    "calibration": [
+      {
+        "range": "0-19",
+        "count": 210,
+        "predictedRate": 0.09,
+        "observedRate": 0.2857
+      },
+      {
+        "range": "20-39",
+        "count": 30,
+        "predictedRate": 0.21,
+        "observedRate": 0
+      },
+      {
+        "range": "40-59",
+        "count": 0,
+        "predictedRate": 0,
+        "observedRate": 0
+      },
+      {
+        "range": "60-79",
+        "count": 0,
+        "predictedRate": 0,
+        "observedRate": 0
+      },
+      {
+        "range": "80-100",
+        "count": 120,
+        "predictedRate": 1,
+        "observedRate": 1
+      }
+    ],
+    "readiness": {
+      "ready": true,
+      "minimumLabels": 200,
+      "minimumPerClass": 50,
+      "reasons": []
+    }
+  },
+  "cohortSummary": [
+    {
+      "kind": "aman-rutin",
+      "count": 150,
+      "actualProblems": 0,
+      "averageScore": 5
+    },
+    {
+      "kind": "aman-nominal-tinggi-terverifikasi",
+      "count": 30,
+      "actualProblems": 0,
+      "averageScore": 21
+    },
+    {
+      "kind": "bermasalah-sinyal-kuat",
+      "count": 120,
+      "actualProblems": 120,
+      "averageScore": 100
+    },
+    {
+      "kind": "bermasalah-sinyal-lemah",
+      "count": 60,
+      "actualProblems": 60,
+      "averageScore": 19
+    }
+  ]
+}

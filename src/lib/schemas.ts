@@ -21,6 +21,7 @@ export const transactionSchema = z.object({
 
 export const analyzeRequestSchema = z.object({
   transactions: z.array(transactionSchema).min(1).max(500),
+  dataProcessingConsent: z.literal(true),
 });
 
 export const riskSignalSchema = z.object({

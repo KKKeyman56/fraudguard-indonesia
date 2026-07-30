@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Bot, Download, RotateCcw, ShieldAlert, ShieldCheck, TriangleAlert } from "lucide-react";
 import { downloadAnalysisPdf } from "@/lib/pdf";
-import type { BatchAnalysis } from "@/types/transaction";
+import { riskLabelClass, type BatchAnalysis } from "@/types/transaction";
 import { RiskGauge } from "@/components/RiskGauge";
 import { ReviewControls } from "@/components/ReviewControls";
 
@@ -33,7 +33,7 @@ export function ResultsPanel({
         <article className="neon-card stat-card"><span>Total transaksi</span><strong>{analysis.summary.total}</strong></article>
         <article className="neon-card stat-card safe"><span>AMAN</span><strong>{analysis.summary.aman}</strong></article>
         <article className="neon-card stat-card warning"><span>WASPADA</span><strong>{analysis.summary.waspada}</strong></article>
-        <article className="neon-card stat-card danger"><span>TERDETEKSI</span><strong>{analysis.summary.terdeteksi}</strong></article>
+        <article className="neon-card stat-card danger"><span>RISIKO TINGGI</span><strong>{analysis.summary.risikoTinggi}</strong></article>
       </div>
 
       <div className="results-overview">
@@ -60,7 +60,7 @@ export function ResultsPanel({
                   <td>{rupiah.format(item.transaction.nominal)}</td>
                   <td>{item.transaction.metode}<small>{item.transaction.waktu}</small></td>
                   <td><strong>{item.riskScore}</strong>/100</td>
-                  <td><span className={`status ${item.label.toLowerCase()}`}>{item.label === "AMAN" ? <ShieldCheck size={14} /> : item.label === "WASPADA" ? <TriangleAlert size={14} /> : <ShieldAlert size={14} />}{item.label}</span></td>
+                  <td><span className={`status ${riskLabelClass(item.label)}`}>{item.label === "AMAN" ? <ShieldCheck size={14} /> : item.label === "WASPADA" ? <TriangleAlert size={14} /> : <ShieldAlert size={14} />}{item.label}</span></td>
                   <td>
                     <details>
                       <summary>Lihat alasan &amp; signals</summary>

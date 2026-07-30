@@ -64,7 +64,7 @@ export const educationArticles: EducationArticle[] = [
       {
         heading: "Peran FraudGuard",
         paragraphs: [
-          "FraudGuard membantu menyaring data transaksi dan merangkum alasan risiko dalam bahasa yang mudah dipahami. Sistem memberi status AMAN, WASPADA, atau TERDETEKSI agar tim dapat memprioritaskan pemeriksaan.",
+          "FraudGuard membantu menyaring data transaksi dan merangkum alasan risiko dalam bahasa yang mudah dipahami. Sistem memberi status AMAN, WASPADA, atau RISIKO TINGGI agar tim dapat memprioritaskan pemeriksaan.",
           "Hasil AI bukan vonis dan tidak menyatakan seseorang sebagai penipu. Keputusan final tetap membutuhkan verifikasi manusia serta bukti dari sistem pembayaran dan operasional bisnis Anda.",
         ],
       },

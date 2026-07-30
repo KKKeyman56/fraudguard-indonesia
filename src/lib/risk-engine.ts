@@ -8,7 +8,7 @@ export const SUPPORTED_RISK_ENGINE_VERSIONS = [
 ] as const;
 export type RiskEngineVersion = (typeof SUPPORTED_RISK_ENGINE_VERSIONS)[number];
 
-export type RiskEngineLabel = "AMAN" | "WASPADA" | "TERDETEKSI";
+export type RiskEngineLabel = "AMAN" | "WASPADA" | "RISIKO TINGGI";
 export type RiskSeverity = "rendah" | "sedang" | "tinggi";
 
 export type RiskSignal = {
@@ -94,7 +94,7 @@ function median(values: number[]) {
 }
 
 function labelFromScore(score: number): RiskEngineLabel {
-  if (score >= 70) return "TERDETEKSI";
+  if (score >= 70) return "RISIKO TINGGI";
   if (score >= 40) return "WASPADA";
   return "AMAN";
 }
@@ -180,7 +180,7 @@ function evaluateTransaction(
         "FG-S002",
         12,
         "sedang",
-        "Anomali statistik terdeteksi",
+        "Anomali statistik terindikasi",
         `Nominal menyimpang ${robustZ.toFixed(1)} skor robust-z dari pola historis bisnis Anda.`,
         "Bandingkan transaksi dengan pola penjualan dan verifikasi pembayaran sebelum diproses.",
       ));

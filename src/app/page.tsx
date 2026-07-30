@@ -23,7 +23,7 @@ const faqItems = [
     answer: "Anda dapat memasukkan transaksi secara manual atau mengunggah CSV/Excel. Data yang relevan meliputi nama pelanggan, nominal, metode pembayaran, waktu transaksi, kota, dan catatan pendukung.",
   },
   {
-    question: "Apakah status TERDETEKSI berarti transaksi pasti fraud?",
+    question: "Apakah status RISIKO TINGGI berarti transaksi pasti fraud?",
     answer: "Tidak. Status dan skor adalah rekomendasi penyaringan awal, bukan vonis. Verifikasi bukti pembayaran, identitas, percakapan, dan riwayat pesanan sebelum mengambil keputusan final.",
   },
   {
@@ -120,7 +120,7 @@ export default function Home() {
             <h3>Yang FraudGuard lakukan</h3>
             <ul>
               <li>Menganalisis pola dari data transaksi yang Anda masukkan.</li>
-              <li>Memberi skor risiko AMAN, WASPADA, atau TERDETEKSI.</li>
+              <li>Memberi skor risiko AMAN, WASPADA, atau RISIKO TINGGI.</li>
               <li>Menjelaskan sinyal risiko dan langkah verifikasi yang relevan.</li>
               <li>Menyimpan riwayat dan laporan untuk kebutuhan operasional.</li>
             </ul>

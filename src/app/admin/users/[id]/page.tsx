@@ -6,6 +6,7 @@ import { ManageUserControls } from "@/components/ManageUserControls";
 import { getAdminUserDetail, isUserAdmin } from "@/lib/admin-repository";
 import { requireUser } from "@/lib/auth";
 import { PLAN_DETAILS } from "@/lib/plans";
+import { riskLabelClass, type RiskLabel } from "@/types/transaction";
 
 export const metadata: Metadata = { title: "Detail Pengguna" };
 
@@ -14,8 +15,8 @@ function formatDate(value: string | null) {
   return new Intl.DateTimeFormat("id-ID", { dateStyle: "long", timeStyle: "short", timeZone: "Asia/Jakarta" }).format(new Date(value));
 }
 
-function riskLabel(score: number) {
-  if (score >= 70) return "TERDETEKSI";
+function riskLabel(score: number): RiskLabel {
+  if (score >= 70) return "RISIKO TINGGI";
   if (score >= 40) return "WASPADA";
   return "AMAN";
 }
@@ -39,12 +40,12 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
     <section className="admin-stat-grid user-detail-stats" aria-label="Statistik pengguna">
       <article className="neon-card admin-stat"><Bot size={21} /><span>Total analisis</span><strong>{user.analysisCount}</strong><small>Sesi tersimpan</small></article>
       <article className="neon-card admin-stat"><Database size={21} /><span>Total transaksi</span><strong>{user.transactionCount}</strong><small>Baris diperiksa</small></article>
-      <article className="neon-card admin-stat"><ShieldAlert size={21} /><span>Terdeteksi</span><strong>{user.detectedCount}</strong><small>Perlu perhatian</small></article>
+      <article className="neon-card admin-stat"><ShieldAlert size={21} /><span>Risiko tinggi</span><strong>{user.detectedCount}</strong><small>Perlu perhatian</small></article>
       <article className="neon-card admin-stat"><CalendarDays size={21} /><span>Bergabung</span><strong className="date-value">{formatDate(user.createdAt).split(" pukul")[0]}</strong><small>{user.status === "suspended" ? `Dinonaktifkan ${formatDate(user.suspendedAt)} WIB` : "Akun aktif"}</small></article>
     </section>
 
     <section className="admin-grid">
-      <article className="neon-card admin-risk-card"><div className="admin-section-title"><div><span className="eyebrow">RISK PROFILE</span><h2>Distribusi transaksi</h2></div><Activity size={27} /></div><div className="risk-count-grid"><div><span>AMAN</span><strong>{data.risk.safe}</strong></div><div><span>WASPADA</span><strong>{data.risk.warning}</strong></div><div><span>TERDETEKSI</span><strong>{data.risk.detected}</strong></div></div></article>
+      <article className="neon-card admin-risk-card"><div className="admin-section-title"><div><span className="eyebrow">RISK PROFILE</span><h2>Distribusi transaksi</h2></div><Activity size={27} /></div><div className="risk-count-grid"><div><span>AMAN</span><strong>{data.risk.safe}</strong></div><div><span>WASPADA</span><strong>{data.risk.warning}</strong></div><div><span>RISIKO TINGGI</span><strong>{data.risk.detected}</strong></div></div></article>
       <article className="neon-card admin-users-card"><div className="admin-section-title"><div><span className="eyebrow">ACCOUNT INFO</span><h2>Informasi akses</h2></div><UserCog size={27} /></div><dl className="account-info"><div><dt>ID akun</dt><dd>{user.id}</dd></div><div><dt>Role</dt><dd>{user.role === "admin" ? "Administrator" : "Pengguna"}</dd></div><div><dt>Status</dt><dd>{user.status === "active" ? "Aktif" : "Dinonaktifkan"}</dd></div><div><dt>Paket</dt><dd>{PLAN_DETAILS[user.plan].name} · {user.monthlyAnalysisCount.toLocaleString("id-ID")} transaksi bulan ini</dd></div><div><dt>Analisis terakhir</dt><dd>{formatDate(user.lastAnalysisAt)} WIB</dd></div></dl></article>
     </section>
 
@@ -53,7 +54,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
         <div><span className="eyebrow">USER ACTIVITY</span><h2>Analisis terbaru</h2></div>
         <Link className="button button-small button-ghost" href={`/admin/users/${user.id}/history`}>Lihat semua riwayat <ArrowRight size={15} /></Link>
       </div>
-      {data.recentRuns.length === 0 ? <div className="empty-state">Pengguna belum pernah menjalankan analisis.</div> : <div className="table-wrap"><table className="admin-table"><thead><tr><th>Waktu</th><th>Sumber</th><th>Model</th><th>Risiko</th><th>Status</th><th>Detail</th></tr></thead><tbody>{data.recentRuns.map((run) => { const label = riskLabel(run.overallRisk); return <tr key={run.id}><td>{formatDate(run.createdAt)} WIB</td><td>{run.source === "manual" ? "Input manual" : "Upload file"}</td><td>{run.model}</td><td>{run.overallRisk}/100</td><td><span className={`status ${label.toLowerCase()}`}>{label}</span></td><td><Link className="text-link" href={`/admin/users/${user.id}/history/${run.id}`}>Buka laporan <ArrowRight size={14} /></Link></td></tr>; })}</tbody></table></div>}
+      {data.recentRuns.length === 0 ? <div className="empty-state">Pengguna belum pernah menjalankan analisis.</div> : <div className="table-wrap"><table className="admin-table"><thead><tr><th>Waktu</th><th>Sumber</th><th>Model</th><th>Risiko</th><th>Status</th><th>Detail</th></tr></thead><tbody>{data.recentRuns.map((run) => { const label = riskLabel(run.overallRisk); return <tr key={run.id}><td>{formatDate(run.createdAt)} WIB</td><td>{run.source === "manual" ? "Input manual" : "Upload file"}</td><td>{run.model}</td><td>{run.overallRisk}/100</td><td><span className={`status ${riskLabelClass(label)}`}>{label}</span></td><td><Link className="text-link" href={`/admin/users/${user.id}/history/${run.id}`}>Buka laporan <ArrowRight size={14} /></Link></td></tr>; })}</tbody></table></div>}
     </section>
   </main>;
 }

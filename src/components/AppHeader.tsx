@@ -35,6 +35,7 @@ export function AppHeader({ userEmail, isAdmin = false }: { userEmail?: string |
             </Link>
           ))}
           {isAdmin && <Link href="/admin" onClick={() => setOpen(false)} className={pathname.startsWith("/admin") ? "active" : ""}>Admin</Link>}
+          {userEmail && <Link href="/settings" onClick={() => setOpen(false)} className={pathname === "/settings" ? "active" : ""}>Akun</Link>}
           {userEmail ? (
             <form action="/auth/signout" method="post" className="nav-account">
               <span title={userEmail}>{userEmail}</span>

@@ -2,7 +2,7 @@ import type { ExplanationProvider } from "@/lib/groq";
 import type { BusinessBaseline } from "@/lib/baseline";
 import type { RiskSignal } from "@/lib/risk-engine";
 
-export type RiskLabel = "AMAN" | "WASPADA" | "TERDETEKSI";
+export type RiskLabel = "AMAN" | "WASPADA" | "RISIKO TINGGI";
 export type TransactionFeedback = "UNKNOWN" | "SAFE" | "PROBLEM";
 export type ReviewStatus = "PENDING" | "REVIEWED";
 
@@ -47,7 +47,7 @@ export interface BatchAnalysis {
     total: number;
     aman: number;
     waspada: number;
-    terdeteksi: number;
+    risikoTinggi: number;
     overallRisk: number;
     aiInsight: string;
   };
@@ -67,4 +67,9 @@ export interface ApiErrorPayload {
   error: string;
   code?: string;
   requestId?: string;
+}
+
+export function riskLabelClass(label: RiskLabel) {
+  if (label === "RISIKO TINGGI") return "risiko-tinggi";
+  return label.toLocaleLowerCase("id-ID");
 }

@@ -5,7 +5,7 @@
 ## Identitas dan fungsi utama
 
 - FraudGuard menganalisis data transaksi yang dimasukkan pengguna, seperti nominal, metode pembayaran, waktu, kota, pelanggan, dan catatan transaksi.
-- FraudGuard menghasilkan skor risiko dan tiga status: AMAN, WASPADA, dan TERDETEKSI.
+- FraudGuard menghasilkan skor risiko dan tiga status: AMAN, WASPADA, dan RISIKO TINGGI.
 - FraudGuard memberikan alasan dan rekomendasi verifikasi dalam Bahasa Indonesia.
 - FraudGuard mendukung input manual serta unggahan CSV/Excel, riwayat analisis, dan laporan.
 
@@ -14,7 +14,7 @@
 - FraudGuard bukan layanan pencarian blacklist rekening bank.
 - FraudGuard bukan alat verifikasi nomor telepon, identitas, atau legitimasi toko.
 - FraudGuard bukan produk keamanan infrastruktur, anti-hacker, anti-malware, atau antivirus.
-- Status TERDETEKSI tidak berarti seseorang pasti melakukan fraud.
+- Status RISIKO TINGGI tidak berarti seseorang pasti melakukan fraud.
 - Hasil AI adalah rekomendasi penyaringan awal. Keputusan final tetap memerlukan verifikasi manusia dan bukti dari sumber pembayaran resmi.
 
 ## Pengguna utama

@@ -5,7 +5,7 @@ type ExplainableSignal = {
 
 type ExplainableTransaction = {
   transaction: { id: string };
-  label: "AMAN" | "WASPADA" | "TERDETEKSI";
+  label: "AMAN" | "WASPADA" | "RISIKO TINGGI";
   signals: ExplainableSignal[];
 };
 
@@ -29,7 +29,7 @@ function fallbackForTransaction(transaction: ExplainableTransaction) {
 }
 
 export function createFallbackExplanation(risk: ExplainableRisk) {
-  const high = risk.results.filter((item) => item.label === "TERDETEKSI").length;
+  const high = risk.results.filter((item) => item.label === "RISIKO TINGGI").length;
   const review = risk.results.filter((item) => item.label === "WASPADA").length;
   const low = risk.results.length - high - review;
   const insight = high > 0
@@ -48,4 +48,3 @@ export function createFallbackExplanation(risk: ExplainableRisk) {
     provider: "fallback" as const,
   };
 }
-

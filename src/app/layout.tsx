@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AppHeader } from "@/components/AppHeader";
+import { SiteFooter } from "@/components/SiteFooter";
 import { getVerifiedClaims } from "@/lib/auth";
 import { isUserAdmin } from "@/lib/admin-repository";
 
@@ -78,6 +79,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <div className="scanlines" aria-hidden="true" />
         <AppHeader userEmail={userEmail} isAdmin={isAdmin} />
         {children}
+        <SiteFooter />
       </body>
     </html>
   );

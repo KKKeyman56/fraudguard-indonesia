@@ -22,7 +22,7 @@ export function downloadAnalysisPdf(analysis: BatchAnalysis) {
   doc.setFontSize(12);
   doc.text(`Risiko keseluruhan: ${analysis.summary.overallRisk}/100`, 14, 51);
   doc.text(
-    `Total ${analysis.summary.total} | Aman ${analysis.summary.aman} | Waspada ${analysis.summary.waspada} | Terdeteksi ${analysis.summary.terdeteksi}`,
+    `Total ${analysis.summary.total} | Aman ${analysis.summary.aman} | Waspada ${analysis.summary.waspada} | Risiko tinggi ${analysis.summary.risikoTinggi}`,
     14,
     59,
   );

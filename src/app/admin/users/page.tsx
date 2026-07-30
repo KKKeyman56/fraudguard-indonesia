@@ -58,7 +58,7 @@ export default async function AdminUsersPage({
           <tbody>{data.users.map((user) => <tr key={user.id}>
             <td><div className="user-identity"><span className="admin-avatar">{user.email.slice(0, 1).toUpperCase()}</span><div><strong>{user.email}</strong><small>Bergabung {formatDate(user.createdAt)} WIB</small></div></div></td>
             <td><div className="account-badges"><span className={`account-status ${user.status}`}>{user.status === "active" ? "AKTIF" : "NONAKTIF"}</span><span className={`role-badge ${user.role}`}>{user.role.toUpperCase()}</span><span className={`plan-badge ${user.plan}`}>{PLAN_DETAILS[user.plan].name.toUpperCase()}</span></div></td>
-            <td><strong>{user.analysisCount}</strong> analisis<br /><small>{user.monthlyAnalysisCount} bulan ini · {user.transactionCount} transaksi · {user.detectedCount} terdeteksi</small></td>
+            <td><strong>{user.analysisCount}</strong> analisis<br /><small>{user.monthlyAnalysisCount} bulan ini · {user.transactionCount} transaksi · {user.detectedCount} risiko tinggi</small></td>
             <td>{formatDate(user.lastAnalysisAt)} WIB</td>
             <td><ManageUserControls targetId={user.id} currentUserId={currentUserId} role={user.role} status={user.status} plan={user.plan} compact /></td>
             <td><Link className="icon-link" href={`/admin/users/${user.id}`} aria-label={`Buka detail ${user.email}`}><UserCog size={17} /><ChevronRight size={15} /></Link></td>

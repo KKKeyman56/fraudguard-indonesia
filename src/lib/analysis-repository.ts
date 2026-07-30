@@ -5,6 +5,7 @@ import { riskSignalSchema } from "@/lib/schemas";
 import { buildBusinessBaseline, type BusinessBaseline } from "@/lib/baseline";
 import type { ExplanationProvider } from "@/lib/groq";
 import type { RiskSignal } from "@/lib/risk-engine";
+import { DATA_PROCESSING_CONSENT_VERSION } from "@/lib/legal-versions";
 import type {
   BatchAnalysis,
   ReviewStatus,
@@ -44,7 +45,7 @@ export type AnalysisHistoryItem = {
   total: number;
   aman: number;
   waspada: number;
-  terdeteksi: number;
+  risikoTinggi: number;
 };
 
 export type AnalysisHistoryPage = {
@@ -126,7 +127,7 @@ export async function getBusinessBaseline(userId: string) {
 
   if (error) throw new Error(`BUSINESS_BASELINE_READ_FAILED:${error.code}`);
   const transactions = (data ?? [])
-    .filter((row) => row.status !== "TERDETEKSI" || row.feedback_status === "SAFE")
+    .filter((row) => row.status !== "RISIKO TINGGI" || row.feedback_status === "SAFE")
     .map((row) => ({
       nominal: Number(row.amount),
       metode: row.payment_method,
@@ -153,6 +154,8 @@ export async function persistAnalysis(userId: string, analysis: BatchAnalysis) {
       explanation_provider: analysis.meta?.explanationProvider ?? "legacy",
       baseline_snapshot: analysis.meta?.baseline ?? {},
       source,
+      data_processing_consent_version: DATA_PROCESSING_CONSENT_VERSION,
+      data_processing_consented_at: new Date().toISOString(),
     })
     .select("id")
     .single();
@@ -283,7 +286,7 @@ async function readAnalysis(userId: string, analysisId?: string): Promise<BatchA
       total: results.length,
       aman: results.filter((item) => item.label === "AMAN").length,
       waspada: results.filter((item) => item.label === "WASPADA").length,
-      terdeteksi: results.filter((item) => item.label === "TERDETEKSI").length,
+      risikoTinggi: results.filter((item) => item.label === "RISIKO TINGGI").length,
       overallRisk: run.overall_risk,
       aiInsight: run.ai_summary || "Ringkasan AI tidak tersedia.",
     },
@@ -351,13 +354,13 @@ export async function listAnalysisHistory(
     storedTransactions = (transactionData ?? []) as StoredHistoryTransaction[];
   }
 
-  const countsByRun = new Map<string, { total: number; aman: number; waspada: number; terdeteksi: number }>();
+  const countsByRun = new Map<string, { total: number; aman: number; waspada: number; risikoTinggi: number }>();
   for (const transaction of storedTransactions) {
-    const counts = countsByRun.get(transaction.analysis_id) ?? { total: 0, aman: 0, waspada: 0, terdeteksi: 0 };
+    const counts = countsByRun.get(transaction.analysis_id) ?? { total: 0, aman: 0, waspada: 0, risikoTinggi: 0 };
     counts.total += 1;
     if (transaction.status === "AMAN") counts.aman += 1;
     if (transaction.status === "WASPADA") counts.waspada += 1;
-    if (transaction.status === "TERDETEKSI") counts.terdeteksi += 1;
+    if (transaction.status === "RISIKO TINGGI") counts.risikoTinggi += 1;
     countsByRun.set(transaction.analysis_id, counts);
   }
 
@@ -371,7 +374,7 @@ export async function listAnalysisHistory(
       explanationProvider: run.explanation_provider || "legacy",
       source: run.source === "manual" ? "manual" : "file",
       createdAt: run.created_at,
-      ...(countsByRun.get(run.id) ?? { total: 0, aman: 0, waspada: 0, terdeteksi: 0 }),
+      ...(countsByRun.get(run.id) ?? { total: 0, aman: 0, waspada: 0, risikoTinggi: 0 }),
     })),
     page,
     pageSize: safePageSize,

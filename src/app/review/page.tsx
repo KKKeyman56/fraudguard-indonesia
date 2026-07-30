@@ -4,6 +4,7 @@ import { Activity, AlertTriangle, BarChart3, BrainCircuit, CheckCircle2, Clipboa
 import { ReviewControls } from "@/components/ReviewControls";
 import { requireUser } from "@/lib/auth";
 import { getReviewDashboardData } from "@/lib/review-repository";
+import { riskLabelClass } from "@/types/transaction";
 
 export const metadata: Metadata = { title: "Review Risiko" };
 
@@ -127,7 +128,7 @@ export default async function ReviewPage() {
               <article key={item.id} className={item.reviewStatus === "PENDING" ? "pending" : "reviewed"}>
                 <div className="review-transaction-head">
                   <div><strong>{item.orderId || item.customerName}</strong><small>{item.customerName} · {item.city || "Kota tidak diisi"}</small></div>
-                  <span className={`status ${item.label.toLowerCase()}`}>{item.riskScore}/100 · {item.label}</span>
+                  <span className={`status ${riskLabelClass(item.label)}`}>{item.riskScore}/100 · {item.label}</span>
                 </div>
                 <p>{rupiah.format(item.amount)} · {item.paymentMethod} · {formatDate(item.transactionTime)} WIB</p>
                 <ReviewControls transactionId={item.id} initialFeedback={item.feedback} initialStatus={item.reviewStatus} initialNote={item.reviewNote} />
