@@ -7,6 +7,7 @@ import type {
   RiskLabel,
   TransactionFeedback,
 } from "@/types/transaction";
+import { evaluateRiskScores, type ModelEvaluation } from "@/lib/model-evaluation";
 
 type ReviewRow = {
   id: string;
@@ -52,6 +53,7 @@ export type ReviewDashboardData = {
     falsePositiveRate: number;
   };
   baseline: Awaited<ReturnType<typeof getBusinessBaseline>>;
+  evaluation: ModelEvaluation;
   trends: Array<{ date: string; averageRisk: number; analyses: number }>;
   transactions: Array<{
     id: string;
@@ -85,13 +87,21 @@ export type ReviewDashboardData = {
 export async function getReviewDashboardData(userId: string): Promise<ReviewDashboardData> {
   const supabase = await createClient();
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-  const [transactionsResult, runsResult, auditResult, baseline] = await Promise.all([
+  const [transactionsResult, labeledResult, runsResult, auditResult, baseline] = await Promise.all([
     supabase
       .from("transactions")
       .select("id, analysis_id, customer_name, order_id, amount, payment_method, transaction_time, city, risk_score, status, feedback_status, review_status, review_note, reviewed_at, created_at")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(200),
+    supabase
+      .from("transactions")
+      .select("risk_score, feedback_status")
+      .eq("user_id", userId)
+      .eq("review_status", "REVIEWED")
+      .in("feedback_status", ["SAFE", "PROBLEM"])
+      .order("reviewed_at", { ascending: false })
+      .limit(5_000),
     supabase
       .from("analysis_runs")
       .select("overall_risk, created_at")
@@ -107,7 +117,12 @@ export async function getReviewDashboardData(userId: string): Promise<ReviewDash
     getBusinessBaseline(userId),
   ]);
 
-  const firstError = [transactionsResult.error, runsResult.error, auditResult.error].find(Boolean);
+  const firstError = [
+    transactionsResult.error,
+    labeledResult.error,
+    runsResult.error,
+    auditResult.error,
+  ].find(Boolean);
   if (firstError) throw new Error(`REVIEW_DASHBOARD_READ_FAILED:${firstError.code}`);
 
   const rows = (transactionsResult.data ?? []) as ReviewRow[];
@@ -138,6 +153,12 @@ export async function getReviewDashboardData(userId: string): Promise<ReviewDash
         : Math.round((falsePositives / reviewedRisky.length) * 100),
     },
     baseline,
+    evaluation: evaluateRiskScores(
+      (labeledResult.data ?? []).map((row) => ({
+        riskScore: row.risk_score,
+        actualProblem: row.feedback_status === "PROBLEM",
+      })),
+    ),
     trends: [...trendMap.entries()].map(([date, value]) => ({
       date,
       averageRisk: Math.round(value.total / value.analyses),

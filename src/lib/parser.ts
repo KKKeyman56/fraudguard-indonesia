@@ -83,7 +83,7 @@ function normalizeRows(rows: RawRow[]): Transaction[] {
   if (invalid) {
     throw new Error("Kolom wajib: pelanggan, nominal, metode, dan waktu. Periksa kembali format file.");
   }
-  if (transactions.length > 50) throw new Error("Maksimal 50 transaksi per analisis.");
+  if (transactions.length > 500) throw new Error("Maksimal 500 transaksi per analisis.");
   return transactions;
 }
 

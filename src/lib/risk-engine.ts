@@ -1,6 +1,12 @@
 import { hourFromTimestamp, type BusinessBaseline } from "./baseline.ts";
 
-export const RISK_ENGINE_VERSION = "rules-v1.1.0";
+export const LEGACY_RISK_ENGINE_VERSION = "rules-v1.1.0";
+export const RISK_ENGINE_VERSION = "hybrid-v2.0.0";
+export const SUPPORTED_RISK_ENGINE_VERSIONS = [
+  RISK_ENGINE_VERSION,
+  LEGACY_RISK_ENGINE_VERSION,
+] as const;
+export type RiskEngineVersion = (typeof SUPPORTED_RISK_ENGINE_VERSIONS)[number];
 
 export type RiskEngineLabel = "AMAN" | "WASPADA" | "TERDETEKSI";
 export type RiskSeverity = "rendah" | "sedang" | "tinggi";
@@ -41,7 +47,7 @@ export type ScoredTransaction<T extends RiskEngineTransaction = RiskEngineTransa
 };
 
 export type RiskEngineResult<T extends RiskEngineTransaction = RiskEngineTransaction> = {
-  engineVersion: typeof RISK_ENGINE_VERSION;
+  engineVersion: RiskEngineVersion;
   overallRisk: number;
   baseline?: BusinessBaseline;
   results: ScoredTransaction<T>[];
@@ -141,12 +147,45 @@ function evaluateTransaction(
   context: BatchContext,
   batchSize: number,
   baseline?: BusinessBaseline,
+  engineVersion: RiskEngineVersion = RISK_ENGINE_VERSION,
 ) {
   const signals: RiskSignal[] = [];
   const customer = normalizeText(transaction.pelanggan);
   const city = normalizeText(transaction.kota);
   const notes = normalizeText(transaction.catatan);
   const hour = hourFromTimestamp(transaction.waktu);
+
+  if (
+    engineVersion === RISK_ENGINE_VERSION
+    && baseline
+    && baseline.sampleSize >= 20
+    && baseline.medianAbsoluteDeviation > 0
+  ) {
+    const robustZ = (
+      0.6745
+      * (transaction.nominal - baseline.medianAmount)
+      / baseline.medianAbsoluteDeviation
+    );
+    if (robustZ >= 5) {
+      signals.push(signal(
+        "FG-S001",
+        20,
+        "tinggi",
+        "Anomali statistik sangat kuat",
+        `Nominal menyimpang ${robustZ.toFixed(1)} skor robust-z dari pola historis bisnis Anda.`,
+        "Tahan pemrosesan sementara dan cocokkan nominal, produk, serta pembayaran pada sumber resmi.",
+      ));
+    } else if (robustZ >= 3.5) {
+      signals.push(signal(
+        "FG-S002",
+        12,
+        "sedang",
+        "Anomali statistik terdeteksi",
+        `Nominal menyimpang ${robustZ.toFixed(1)} skor robust-z dari pola historis bisnis Anda.`,
+        "Bandingkan transaksi dengan pola penjualan dan verifikasi pembayaran sebelum diproses.",
+      ));
+    }
+  }
 
   if (transaction.nominal >= EXTREME_AMOUNT) {
     signals.push(signal(
@@ -412,14 +451,22 @@ function evaluateTransaction(
 export function scoreTransactions<T extends RiskEngineTransaction>(
   transactions: T[],
   baseline?: BusinessBaseline,
+  options: { engineVersion?: RiskEngineVersion } = {},
 ): RiskEngineResult<T> {
   if (transactions.length === 0) {
     throw new Error("RISK_ENGINE_EMPTY_INPUT");
   }
 
   const context = createBatchContext(transactions);
+  const engineVersion = options.engineVersion ?? RISK_ENGINE_VERSION;
   const results = transactions.map((transaction) => {
-    const signals = evaluateTransaction(transaction, context, transactions.length, baseline);
+    const signals = evaluateTransaction(
+      transaction,
+      context,
+      transactions.length,
+      baseline,
+      engineVersion,
+    );
     const riskScore = Math.min(
       100,
       BASE_RISK_SCORE + signals.reduce((total, item) => total + item.weight, 0),
@@ -437,7 +484,7 @@ export function scoreTransactions<T extends RiskEngineTransaction>(
   const overallRisk = Math.round((maximumRisk * 0.65) + (averageRisk * 0.35));
 
   return {
-    engineVersion: RISK_ENGINE_VERSION,
+    engineVersion,
     overallRisk,
     baseline,
     results,

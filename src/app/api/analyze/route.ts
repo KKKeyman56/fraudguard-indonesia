@@ -1,33 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { explainRiskWithGroq } from "@/lib/groq";
+import { createFallbackExplanation } from "@/lib/fallback-explanation";
 import { scoreTransactions } from "@/lib/risk-engine";
 import { analyzeRequestSchema } from "@/lib/schemas";
 import type { AnalysisResult, BatchAnalysis } from "@/types/transaction";
 import { getAccountStatus, getVerifiedClaims } from "@/lib/auth";
 import { getBusinessBaseline, persistAnalysis } from "@/lib/analysis-repository";
 import {
+  consumeAnalysisRateLimit,
   getAnalysisQuota,
   releaseAnalysisQuota,
   reserveAnalysisQuota,
 } from "@/lib/billing-repository";
+import { getActiveRiskEngineVersion } from "@/lib/engine-registry";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
-
-const attempts = new Map<string, { count: number; resetAt: number }>();
-const WINDOW_MS = 60_000;
-const MAX_REQUESTS = 8;
-
-function isRateLimited(ip: string) {
-  const now = Date.now();
-  const entry = attempts.get(ip);
-  if (!entry || entry.resetAt <= now) {
-    attempts.set(ip, { count: 1, resetAt: now + WINDOW_MS });
-    return false;
-  }
-  entry.count += 1;
-  return entry.count > MAX_REQUESTS;
-}
 
 export async function POST(request: NextRequest) {
   const requestId = request.headers.get("x-request-id") || crypto.randomUUID();
@@ -54,14 +42,24 @@ export async function POST(request: NextRequest) {
     );
   }
   const contentLength = Number(request.headers.get("content-length") || 0);
-  if (contentLength > 256_000) {
+  if (contentLength > 2_000_000) {
     return json(
       { error: "Ukuran data terlalu besar. Kurangi jumlah atau panjang catatan transaksi.", code: "PAYLOAD_TOO_LARGE" },
       413,
     );
   }
   const userKey = typeof claims.sub === "string" ? claims.sub : "unknown";
-  if (isRateLimited(userKey)) {
+  let withinRateLimit = false;
+  try {
+    withinRateLimit = await consumeAnalysisRateLimit();
+  } catch {
+    console.error(JSON.stringify({ level: "error", event: "rate_limit_check_failed", requestId }));
+    return json(
+      { error: "Layanan pembatasan permintaan sedang tidak tersedia. Coba lagi.", code: "RATE_LIMIT_UNAVAILABLE" },
+      503,
+    );
+  }
+  if (!withinRateLimit) {
     return json(
       { error: "Terlalu banyak permintaan. Tunggu satu menit lalu coba lagi.", code: "RATE_LIMITED" },
       429,
@@ -73,7 +71,7 @@ export async function POST(request: NextRequest) {
     const parsed = analyzeRequestSchema.safeParse(raw);
     if (!parsed.success) {
       return json(
-        { error: "Data transaksi tidak valid atau melebihi 50 baris.", code: "INVALID_INPUT" },
+        { error: "Data transaksi tidak valid atau melebihi 500 baris.", code: "INVALID_INPUT" },
         400,
       );
     }
@@ -89,6 +87,15 @@ export async function POST(request: NextRequest) {
       );
     }
     const requestedTransactions = parsed.data.transactions.length;
+    if (quota.plan === "free" && requestedTransactions > 50) {
+      return json(
+        {
+          error: "Paket Gratis maksimal 50 transaksi sekali analisis. Gunakan paket Pro atau Max untuk batch hingga 500 transaksi.",
+          code: "BATCH_LIMIT_EXCEEDED",
+        },
+        402,
+      );
+    }
     if (
       quota.monthlyLimit !== null
       && quota.remaining !== null
@@ -141,8 +148,15 @@ export async function POST(request: NextRequest) {
       } catch {
         console.warn(JSON.stringify({ level: "warn", event: "business_baseline_unavailable", requestId }));
       }
-      const risk = scoreTransactions(parsed.data.transactions, baseline);
-      const explanation = await explainRiskWithGroq(risk);
+      const activeEngineVersion = await getActiveRiskEngineVersion();
+      const risk = scoreTransactions(
+        parsed.data.transactions,
+        baseline,
+        { engineVersion: activeEngineVersion },
+      );
+      const explanation = requestedTransactions > 50
+        ? createFallbackExplanation(risk)
+        : await explainRiskWithGroq(risk);
       const explanationById = new Map(explanation.results.map((item) => [item.id, item]));
       const results: AnalysisResult[] = risk.results.map((item) => {
         const explained = explanationById.get(item.transaction.id);

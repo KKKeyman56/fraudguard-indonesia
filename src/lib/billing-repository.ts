@@ -68,6 +68,13 @@ export async function releaseAnalysisQuota(reservationId: string): Promise<void>
   if (error) throw new Error(`ANALYSIS_QUOTA_RELEASE_FAILED:${error.code}`);
 }
 
+export async function consumeAnalysisRateLimit(): Promise<boolean> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("consume_my_analysis_rate_limit");
+  if (error) throw new Error(`ANALYSIS_RATE_LIMIT_FAILED:${error.code}`);
+  return data === true;
+}
+
 export async function getRecentPayments(): Promise<PaymentSummary[]> {
   const supabase = await createClient();
   const { data, error } = await supabase

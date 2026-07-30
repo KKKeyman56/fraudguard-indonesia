@@ -64,7 +64,7 @@ export function AnalyzeWorkspace({ quota }: { quota: AnalysisQuota }) {
       shippingMethod: String(form.get("shippingMethod") || "").trim() || undefined,
     };
     if (!item.pelanggan || !item.metode || !item.waktu) return setMessage("Lengkapi pelanggan, metode, dan waktu.");
-    if (transactions.length >= 50) return setMessage("Maksimal 50 transaksi per analisis.");
+    if (transactions.length >= 500) return setMessage("Maksimal 500 transaksi per analisis.");
     setTransactions([...transactions, item]);
     event.currentTarget.reset();
     setMessage(null);
@@ -105,7 +105,7 @@ export function AnalyzeWorkspace({ quota }: { quota: AnalysisQuota }) {
           <div className="upload-zone" onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); void handleFile(event.dataTransfer.files[0]); }}>
             <FileSpreadsheet size={42} aria-hidden="true" />
             <h2>Letakkan file transaksi di sini</h2>
-            <p>CSV atau XLSX • maksimal 50 transaksi</p>
+            <p>CSV atau XLSX • maksimal 500 transaksi (Gratis maksimal 50)</p>
             <input ref={inputRef} hidden type="file" accept=".csv,.xlsx" onChange={(event) => void handleFile(event.target.files?.[0])} />
             <button className="button button-ghost" onClick={() => inputRef.current?.click()}>Pilih file</button>
             <button className="text-button" onClick={() => setTransactions(createSampleTransactions())}><Sparkles size={16} /> Gunakan 5 data contoh</button>

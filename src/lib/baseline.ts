@@ -8,6 +8,7 @@ export type BaselineTransaction = {
 export type BusinessBaseline = {
   sampleSize: number;
   medianAmount: number;
+  medianAbsoluteDeviation: number;
   p90Amount: number;
   normalHourStart: number | null;
   normalHourEnd: number | null;
@@ -33,6 +34,10 @@ function percentile(values: number[], ratio: number) {
   return ordered[index];
 }
 
+function medianAbsoluteDeviation(values: number[], center: number) {
+  return percentile(values.map((value) => Math.abs(value - center)), 0.5);
+}
+
 function dominant(values: string[], maximum: number) {
   const counts = new Map<string, number>();
   for (const value of values.map(normalize).filter(Boolean)) {
@@ -50,13 +55,15 @@ function dominant(values: string[], maximum: number) {
 
 export function buildBusinessBaseline(transactions: BaselineTransaction[]): BusinessBaseline {
   const amounts = transactions.map((item) => item.nominal).filter(Number.isFinite);
+  const medianAmount = percentile(amounts, 0.5);
   const hours = transactions
     .map((item) => hourFromTimestamp(item.waktu))
     .filter((hour): hour is number => hour !== null);
 
   return {
     sampleSize: transactions.length,
-    medianAmount: percentile(amounts, 0.5),
+    medianAmount,
+    medianAbsoluteDeviation: medianAbsoluteDeviation(amounts, medianAmount),
     p90Amount: percentile(amounts, 0.9),
     normalHourStart: hours.length >= 10 ? percentile(hours, 0.1) : null,
     normalHourEnd: hours.length >= 10 ? percentile(hours, 0.9) : null,

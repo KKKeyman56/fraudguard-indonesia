@@ -20,11 +20,11 @@ export const transactionSchema = z.object({
 });
 
 export const analyzeRequestSchema = z.object({
-  transactions: z.array(transactionSchema).min(1).max(50),
+  transactions: z.array(transactionSchema).min(1).max(500),
 });
 
 export const riskSignalSchema = z.object({
-  code: z.string().regex(/^FG-R\d{3}$/),
+  code: z.string().regex(/^FG-[RS]\d{3}$/),
   weight: z.number().int().positive().max(100),
   severity: z.enum(["rendah", "sedang", "tinggi"]),
   title: z.string().min(1).max(160),

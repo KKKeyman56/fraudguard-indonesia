@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Activity, AlertTriangle, BarChart3, CheckCircle2, ClipboardCheck, ShieldAlert } from "lucide-react";
+import { Activity, AlertTriangle, BarChart3, BrainCircuit, CheckCircle2, ClipboardCheck, ShieldAlert } from "lucide-react";
 import { ReviewControls } from "@/components/ReviewControls";
 import { requireUser } from "@/lib/auth";
 import { getReviewDashboardData } from "@/lib/review-repository";
@@ -75,6 +75,48 @@ export default async function ReviewPage() {
             </div>
           )}
         </article>
+      </section>
+
+      <section className="neon-card model-evaluation-card">
+        <div className="admin-section-title">
+          <div>
+            <span className="eyebrow">MODEL READINESS &amp; EVALUATION</span>
+            <h2>Gerbang supervised ML</h2>
+          </div>
+          <span className={data.evaluation.readiness.ready ? "ml-ready" : "ml-locked"}>
+            <BrainCircuit size={16} />
+            {data.evaluation.readiness.ready ? "SIAP EKSPERIMEN ML" : "ML BELUM DIAKTIFKAN"}
+          </span>
+        </div>
+        <p className="evaluation-copy">
+          XGBoost/LightGBM hanya boleh diuji setelah label manusia cukup dan kedua kelas terwakili.
+          Engine hybrid statistik tetap aktif selama gerbang ini terkunci.
+        </p>
+        <div className="evaluation-metrics">
+          <div><span>Label valid</span><strong>{data.evaluation.sampleSize}</strong><small>target {data.evaluation.readiness.minimumLabels}</small></div>
+          <div><span>Bermasalah</span><strong>{data.evaluation.positives}</strong><small>target {data.evaluation.readiness.minimumPerClass}</small></div>
+          <div><span>Aman</span><strong>{data.evaluation.negatives}</strong><small>target {data.evaluation.readiness.minimumPerClass}</small></div>
+          <div><span>Precision</span><strong>{data.evaluation.precision === null ? "N/A" : `${Math.round(data.evaluation.precision * 100)}%`}</strong></div>
+          <div><span>Recall</span><strong>{data.evaluation.recall === null ? "N/A" : `${Math.round(data.evaluation.recall * 100)}%`}</strong></div>
+          <div><span>F1</span><strong>{data.evaluation.f1 === null ? "N/A" : data.evaluation.f1.toFixed(2)}</strong></div>
+          <div><span>PR-AUC</span><strong>{data.evaluation.prAuc === null ? "N/A" : data.evaluation.prAuc.toFixed(2)}</strong></div>
+          <div><span>False positive</span><strong>{data.evaluation.falsePositiveRate === null ? "N/A" : `${Math.round(data.evaluation.falsePositiveRate * 100)}%`}</strong></div>
+          <div><span>Brier score</span><strong>{data.evaluation.brierScore === null ? "N/A" : data.evaluation.brierScore.toFixed(3)}</strong><small>lebih kecil lebih baik</small></div>
+        </div>
+        <div className="calibration-grid" aria-label="Kalibrasi skor risiko">
+          {data.evaluation.calibration.map((bucket) => (
+            <div key={bucket.range}>
+              <span>Skor {bucket.range}</span>
+              <strong>{bucket.count}</strong>
+              <small>prediksi {Math.round(bucket.predictedRate * 100)}% · aktual {Math.round(bucket.observedRate * 100)}%</small>
+            </div>
+          ))}
+        </div>
+        {!data.evaluation.readiness.ready && (
+          <ul className="readiness-reasons">
+            {data.evaluation.readiness.reasons.map((reason) => <li key={reason}>{reason}</li>)}
+          </ul>
+        )}
       </section>
 
       <section className="neon-card review-queue-card">

@@ -103,6 +103,9 @@ function parseBaseline(value: unknown): BusinessBaseline | undefined {
   return {
     sampleSize: item.sampleSize,
     medianAmount: item.medianAmount,
+    medianAbsoluteDeviation: typeof item.medianAbsoluteDeviation === "number"
+      ? item.medianAbsoluteDeviation
+      : 0,
     p90Amount: item.p90Amount,
     normalHourStart: typeof item.normalHourStart === "number" ? item.normalHourStart : null,
     normalHourEnd: typeof item.normalHourEnd === "number" ? item.normalHourEnd : null,

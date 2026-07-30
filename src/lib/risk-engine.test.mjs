@@ -119,6 +119,7 @@ test("baseline bisnis menghitung median, jam, metode, dan kota secara determinis
   assert.deepEqual(baseline, buildBusinessBaseline(structuredClone(history)));
   assert.equal(baseline.sampleSize, 20);
   assert.equal(baseline.medianAmount, 1_000_000);
+  assert.equal(baseline.medianAbsoluteDeviation, 500_000);
   assert.equal(baseline.p90Amount, 1_800_000);
   assert.deepEqual(baseline.dominantMethods, ["qris"]);
   assert.deepEqual(baseline.dominantCities, ["bandung"]);
@@ -130,6 +131,7 @@ test("baseline toko memunculkan sinyal anomali nominal, waktu, metode, dan kota"
   const baseline = {
     sampleSize: 30,
     medianAmount: 300_000,
+    medianAbsoluteDeviation: 100_000,
     p90Amount: 900_000,
     normalHourStart: 8,
     normalHourEnd: 19,
@@ -151,6 +153,26 @@ test("baseline toko memunculkan sinyal anomali nominal, waktu, metode, dan kota"
   assert.ok(codes.includes("FG-R015"));
   assert.ok(codes.includes("FG-R016"));
   assert.deepEqual(result.baseline, baseline);
+});
+
+test("hybrid v2 menambahkan robust z-score dan versi lama dapat dipakai untuk rollback", () => {
+  const baseline = {
+    sampleSize: 30,
+    medianAmount: 300_000,
+    medianAbsoluteDeviation: 50_000,
+    p90Amount: 700_000,
+    normalHourStart: 8,
+    normalHourEnd: 20,
+    dominantMethods: ["qris"],
+    dominantCities: ["bandung"],
+  };
+  const transaction = { ...normalTransaction, nominal: 2_000_000 };
+  const hybrid = scoreTransactions([transaction], baseline);
+  const rollback = scoreTransactions([transaction], baseline, { engineVersion: "rules-v1.1.0" });
+
+  assert.ok(hybrid.results[0].signals.some((item) => item.code === "FG-S001"));
+  assert.ok(!rollback.results[0].signals.some((item) => item.code.startsWith("FG-S")));
+  assert.equal(rollback.engineVersion, "rules-v1.1.0");
 });
 
 test("data transaksi yang lebih kaya mengaktifkan aturan akun baru dan perilaku pembayaran", () => {
