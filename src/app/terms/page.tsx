@@ -33,7 +33,9 @@ export default function TermsPage() {
         title: "Paket dan pembayaran",
         paragraphs: [
           "Harga, kuota, dan masa aktif tampil pada halaman Paket. Aktivasi paket dilakukan setelah webhook pembayaran terverifikasi.",
-          "Sandbox tidak menagihkan uang sungguhan. Sebelum pembayaran produksi diaktifkan, kebijakan refund dan identitas usaha harus ditinjau kembali.",
+          "Paket berbayar merupakan pembayaran satu kali untuk masa aktif 30 hari dan tidak diperpanjang otomatis. Pengguna perlu melakukan pembayaran baru untuk memperpanjang paket.",
+          "Pembayaran yang telah berhasil pada umumnya tidak dapat dibatalkan. Permintaan pengembalian dana dapat ditinjau untuk tagihan ganda, kegagalan aktivasi yang terbukti, atau keadaan lain yang diwajibkan hukum. Hasil peninjauan tidak mengurangi hak konsumen berdasarkan peraturan yang berlaku.",
+          "Transaksi Sandbox hanya untuk pengujian dan tidak menagihkan uang sungguhan. Halaman Paket akan menampilkan mode pembayaran yang sedang aktif.",
         ],
       },
       {
@@ -58,4 +60,3 @@ export default function TermsPage() {
     ]}
   />;
 }
-

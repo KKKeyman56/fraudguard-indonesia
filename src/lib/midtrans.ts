@@ -1,7 +1,8 @@
 import "server-only";
 
-import { createHash, timingSafeEqual } from "node:crypto";
+import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
+import { createMidtransSignature, mapMidtransPaymentStatus, type PaymentStatus } from "@/lib/payment-core";
 
 export const purchasablePlanSchema = z.enum(["pro", "enterprise"]);
 export type PurchasablePlan = z.infer<typeof purchasablePlanSchema>;
@@ -26,7 +27,7 @@ const statusSchema = z.object({
 });
 
 export type MidtransStatus = z.infer<typeof statusSchema>;
-export type PaymentStatus = "pending" | "paid" | "denied" | "cancelled" | "expired" | "failed" | "refunded";
+export type { PaymentStatus } from "@/lib/payment-core";
 
 function getMidtransConfig() {
   const serverKey = process.env.MIDTRANS_SERVER_KEY;
@@ -38,6 +39,10 @@ function getMidtransConfig() {
     snapBaseUrl: production ? "https://app.midtrans.com" : "https://app.sandbox.midtrans.com",
     apiBaseUrl: production ? "https://api.midtrans.com" : "https://api.sandbox.midtrans.com",
   };
+}
+
+export function isMidtransProduction() {
+  return process.env.MIDTRANS_IS_PRODUCTION === "true";
 }
 
 function authorization(serverKey: string) {
@@ -93,9 +98,12 @@ export async function createSnapTransaction(input: {
 export function verifyNotificationSignature(payload: MidtransStatus) {
   if (!payload.signature_key) return false;
   const { serverKey } = getMidtransConfig();
-  const expected = createHash("sha512")
-    .update(`${payload.order_id}${payload.status_code}${payload.gross_amount}${serverKey}`)
-    .digest("hex");
+  const expected = createMidtransSignature({
+    orderId: payload.order_id,
+    statusCode: payload.status_code,
+    grossAmount: payload.gross_amount,
+    serverKey,
+  });
   const received = payload.signature_key.toLowerCase();
   if (received.length !== expected.length) return false;
   return timingSafeEqual(Buffer.from(received, "utf8"), Buffer.from(expected, "utf8"));
@@ -123,15 +131,5 @@ export async function getTransactionStatus(orderId: string) {
 }
 
 export function mapPaymentStatus(status: MidtransStatus): PaymentStatus {
-  const transactionStatus = status.transaction_status.toLowerCase();
-  const fraudStatus = status.fraud_status?.toLowerCase();
-
-  if ((transactionStatus === "capture" || transactionStatus === "settlement") &&
-      (!fraudStatus || fraudStatus === "accept")) return "paid";
-  if (transactionStatus === "deny") return "denied";
-  if (transactionStatus === "cancel") return "cancelled";
-  if (transactionStatus === "expire") return "expired";
-  if (transactionStatus === "failure") return "failed";
-  if (["refund", "partial_refund", "chargeback", "partial_chargeback"].includes(transactionStatus)) return "refunded";
-  return "pending";
+  return mapMidtransPaymentStatus(status);
 }

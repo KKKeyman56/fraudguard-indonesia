@@ -3,7 +3,9 @@ import Link from "next/link";
 import { Bot, Check, Crown, Gauge, ReceiptText, ShieldCheck } from "lucide-react";
 import { getAnalysisQuota, getRecentPayments, type PaymentSummary } from "@/lib/billing-repository";
 import { requireUser } from "@/lib/auth";
+import { isMidtransProduction } from "@/lib/midtrans";
 import { PLAN_DETAILS, type SubscriptionPlan } from "@/lib/plans";
+import { PaymentReturnStatus } from "@/components/PaymentReturnStatus";
 import { PurchasePlanButton } from "@/components/PurchasePlanButton";
 
 export const metadata: Metadata = { title: "Paket & Kuota" };
@@ -28,7 +30,7 @@ const paymentLabels: Record<PaymentSummary["status"], string> = {
 export default async function BillingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ payment?: string }>;
+  searchParams: Promise<{ payment?: string; orderId?: string }>;
 }) {
   await requireUser("/billing");
   const [quota, payments, query] = await Promise.all([
@@ -36,15 +38,13 @@ export default async function BillingPage({
     getRecentPayments(),
     searchParams,
   ]);
+  const productionPayments = isMidtransProduction();
   const percentage = quota.monthlyLimit === null ? 0 : Math.min((quota.used / quota.monthlyLimit) * 100, 100);
 
   return <main className="app-page grid-bg billing-page">
     <div className="page-intro billing-intro"><div><span className="eyebrow">SUBSCRIPTION CONTROL</span><h1>Paket & kuota</h1><p>Pantau pemakaian bulanan dan pilih kapasitas yang sesuai dengan pertumbuhan bisnis Anda.</p></div><span className="current-plan"><Crown size={16} /> PAKET {PLAN_DETAILS[quota.plan].name.toUpperCase()}</span></div>
 
-    {query.payment === "return" && <div className="payment-return" role="status">
-      <ReceiptText size={19} />
-      <div><strong>Pembayaran sedang diverifikasi</strong><span>Status paket akan berubah otomatis setelah webhook Midtrans diterima. Muat ulang halaman ini beberapa saat lagi.</span></div>
-    </div>}
+    {query.payment === "return" && query.orderId && <PaymentReturnStatus orderId={query.orderId} />}
 
     <section className="neon-card usage-card">
       <div><span className="eyebrow">PEMAKAIAN BULAN INI</span><h2>{quota.monthlyLimit === null ? "Transaksi tanpa batas" : `${quota.used.toLocaleString("id-ID")} dari ${quota.monthlyLimit.toLocaleString("id-ID")} transaksi`}</h2><p>{quota.monthlyLimit === null ? "Akun Anda tidak memiliki batas transaksi bulanan." : `${quota.remaining?.toLocaleString("id-ID")} transaksi masih dapat dianalisis sampai pergantian bulan.`}</p></div>
@@ -71,7 +71,7 @@ export default async function BillingPage({
     </section>
 
     <section className="neon-card payment-history">
-      <div className="section-heading compact"><div><span className="eyebrow">MIDTRANS SANDBOX</span><h2>Riwayat pembayaran</h2></div><ReceiptText size={25} /></div>
+      <div className="section-heading compact"><div><span className="eyebrow">MIDTRANS {productionPayments ? "PRODUCTION" : "SANDBOX"}</span><h2>Riwayat pembayaran</h2></div><ReceiptText size={25} /></div>
       {payments.length === 0
         ? <p className="payment-empty">Belum ada transaksi pembayaran di akun ini.</p>
         : <div className="payment-list">{payments.map((payment) => <article key={payment.orderId}>
@@ -80,7 +80,9 @@ export default async function BillingPage({
           <span className={`payment-status ${payment.status}`}>{paymentLabels[payment.status]}</span>
         </article>)}</div>}
     </section>
-    <p className="billing-note">Mode Sandbox aktif: tidak ada uang sungguhan yang ditagihkan. Paket aktif hanya setelah status pembayaran terverifikasi oleh server.</p>
+    <p className="billing-note">{productionPayments
+      ? "Pembayaran satu kali berlaku 30 hari dan tidak diperpanjang otomatis. Paket aktif hanya setelah pembayaran diverifikasi oleh server Midtrans."
+      : "Mode Sandbox aktif: tidak ada uang sungguhan yang ditagihkan. Paket aktif hanya setelah status pembayaran terverifikasi oleh server."}</p>
     <Link className="text-link billing-back" href="/dashboard">Kembali ke dashboard</Link>
   </main>;
 }

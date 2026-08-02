@@ -29,6 +29,8 @@ export async function GET() {
       process.env.NEXT_PUBLIC_SUPABASE_URL &&
       process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     ),
+    paymentConfigured: Boolean(process.env.MIDTRANS_SERVER_KEY),
+    paymentMode: process.env.MIDTRANS_IS_PRODUCTION === "true" ? "production" : "sandbox",
     timestamp: new Date().toISOString(),
   });
 }

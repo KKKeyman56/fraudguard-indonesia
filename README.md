@@ -13,7 +13,7 @@ Engine aktif `hybrid-v2.0.0` menghitung skor deterministik dari aturan, baseline
 - review manusia `SAFE / PROBLEM / UNKNOWN`, catatan internal, baseline bisnis, tren, dan audit log;
 - dashboard admin, manajemen pengguna, histori pengguna, evaluasi model, registry engine, dan rollback;
 - paket Gratis 50 transaksi/bulan, Pro 5.000, Max 10.000;
-- checkout serta webhook Midtrans Sandbox;
+- checkout Midtrans, sinkronisasi status setelah redirect, webhook tervalidasi, dan audit event pembayaran;
 - privacy policy, terms, penghapusan akun mandiri, consent saat daftar, dan consent setiap analisis;
 - rate limit global di Postgres dan reservasi kuota transaksi atomik.
 
@@ -75,12 +75,12 @@ npm run pilot:labeled
 
 Lihat `pilot/README.md`. Hasil sintetis hanya membuktikan jalur teknis dan tidak membuktikan akurasi di pasar.
 
-## Midtrans Sandbox
+## Midtrans Sandbox dan Production
 
 Konfigurasi Vercel:
 
-- `MIDTRANS_SERVER_KEY`: Server Key Sandbox;
-- `MIDTRANS_IS_PRODUCTION=false`;
+- `MIDTRANS_SERVER_KEY`: Server Key dari environment Midtrans yang dipakai;
+- `MIDTRANS_IS_PRODUCTION=false` untuk Sandbox atau `true` untuk transaksi uang sungguhan;
 - `APP_URL=https://fraudguard-indonesia.vercel.app`.
 
 Konfigurasi Midtrans:
@@ -89,6 +89,10 @@ Konfigurasi Midtrans:
 - Finish Redirect URL: `https://fraudguard-indonesia.vercel.app/billing?payment=return`
 
 Paket hanya berubah setelah webhook yang signature-nya valid. Redirect browser tidak boleh mengaktifkan paket. Sandbox tidak menghasilkan pendapatan nyata; aktivasi produksi memerlukan akun merchant production dan key production.
+
+Paket Pro Rp99.000 dan Max Rp198.000 berlaku 30 hari sebagai pembayaran satu kali, bukan langganan otomatis. Setelah kembali dari Snap, browser meminta server mencocokkan status langsung ke Midtrans; webhook tetap menjadi jalur utama dan seluruh perubahan status tercatat secara idempoten.
+
+Sebelum mengubah `MIDTRANS_IS_PRODUCTION=true`, pastikan merchant Midtrans telah aktif, Server Key Production sudah dipasang hanya di Vercel, Notification URL mengarah ke endpoint production, metode pembayaran production aktif, identitas usaha dan kanal dukungan pelanggan tersedia, serta satu transaksi nominal kecil sudah direkonsiliasi dari dashboard Midtrans sampai tabel `payments`.
 
 ## Verifikasi sebelum deploy
 

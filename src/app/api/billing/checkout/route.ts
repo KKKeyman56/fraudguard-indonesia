@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { getAccountStatus, getVerifiedClaims } from "@/lib/auth";
+import { LEGAL_VERSION } from "@/lib/legal-versions";
 import { createSnapTransaction, MIDTRANS_PLANS, purchasablePlanSchema } from "@/lib/midtrans";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -44,9 +46,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Permintaan pembayaran tidak valid." }, { status: 403 });
   }
 
-  const input = purchasablePlanSchema.safeParse((await request.json().catch(() => null) as { plan?: unknown } | null)?.plan);
+  const input = z.object({
+    plan: purchasablePlanSchema,
+    acceptTerms: z.literal(true),
+  }).safeParse(await request.json().catch(() => null));
   if (!input.success) {
-    return NextResponse.json({ error: "Paket yang dipilih tidak valid." }, { status: 400 });
+    return NextResponse.json({ error: "Paket atau persetujuan pembayaran tidak valid." }, { status: 400 });
   }
 
   const admin = createAdminClient();
@@ -62,21 +67,42 @@ export async function POST(request: NextRequest) {
 
   const hasActivePaidPlan = profile.plan !== "free" &&
     (!profile.plan_expires_at || new Date(profile.plan_expires_at).getTime() > Date.now());
-  if (hasActivePaidPlan && profile.plan === input.data) {
+  if (hasActivePaidPlan && profile.plan === input.data.plan) {
     return NextResponse.json({ error: "Paket tersebut masih aktif di akun Anda." }, { status: 409 });
   }
-  if (hasActivePaidPlan && profile.plan === "enterprise" && input.data === "pro") {
+  if (hasActivePaidPlan && profile.plan === "enterprise" && input.data.plan === "pro") {
     return NextResponse.json({ error: "Paket Max yang aktif tidak dapat diturunkan ke Pro." }, { status: 409 });
   }
 
+  const { data: reusablePayment, error: reusableError } = await admin
+    .from("payments")
+    .select("order_id, checkout_url, checkout_expires_at")
+    .eq("user_id", userId)
+    .eq("plan", input.data.plan)
+    .eq("status", "pending")
+    .gt("checkout_expires_at", new Date().toISOString())
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (reusableError) {
+    console.error("Pending checkout read failed", reusableError.code);
+  } else if (reusablePayment?.checkout_url) {
+    return NextResponse.json(
+      { redirectUrl: reusablePayment.checkout_url, orderId: reusablePayment.order_id },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
   const orderId = `FG-${Date.now()}-${randomUUID().slice(0, 8)}`;
-  const amount = MIDTRANS_PLANS[input.data].amount;
+  const amount = MIDTRANS_PLANS[input.data.plan].amount;
   const { error: insertError } = await admin.from("payments").insert({
     order_id: orderId,
     user_id: userId,
-    plan: input.data,
+    plan: input.data.plan,
     amount,
     status: "created",
+    terms_version: LEGAL_VERSION,
+    terms_accepted_at: new Date().toISOString(),
   });
   if (insertError) {
     console.error("Payment insert failed", insertError.code);
@@ -86,11 +112,18 @@ export async function POST(request: NextRequest) {
   try {
     const snap = await createSnapTransaction({
       orderId,
-      plan: input.data,
+      plan: input.data.plan,
       email: String(claims.email),
-      finishUrl: `${appUrl}/billing?payment=return`,
+      finishUrl: `${appUrl}/billing?payment=return&orderId=${encodeURIComponent(orderId)}`,
     });
-    await admin.from("payments").update({ status: "pending", updated_at: new Date().toISOString() }).eq("order_id", orderId);
+    const checkoutExpiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    const { error: updateError } = await admin.from("payments").update({
+      status: "pending",
+      checkout_url: snap.redirect_url,
+      checkout_expires_at: checkoutExpiresAt,
+      updated_at: new Date().toISOString(),
+    }).eq("order_id", orderId);
+    if (updateError) throw new Error(`PAYMENT_CHECKOUT_SAVE_FAILED:${updateError.code}`);
     return NextResponse.json(
       { redirectUrl: snap.redirect_url, orderId },
       { headers: { "Cache-Control": "no-store" } },
@@ -98,6 +131,6 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Snap checkout failed", error);
     await admin.from("payments").update({ status: "failed", updated_at: new Date().toISOString() }).eq("order_id", orderId);
-    return NextResponse.json({ error: "Midtrans Sandbox sedang tidak dapat dihubungi." }, { status: 502 });
+    return NextResponse.json({ error: "Midtrans sedang tidak dapat dihubungi." }, { status: 502 });
   }
 }
