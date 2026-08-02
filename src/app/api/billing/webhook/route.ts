@@ -8,8 +8,15 @@ import { synchronizePayment } from "@/lib/payment-service";
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
+  let payload: unknown;
   try {
-    const notification = parseMidtransStatus(await request.json());
+    payload = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Payload JSON tidak valid." }, { status: 400 });
+  }
+
+  try {
+    const notification = parseMidtransStatus(payload);
     if (!notification.success || !verifyNotificationSignature(notification.data)) {
       return NextResponse.json({ error: "Notifikasi tidak valid." }, { status: 401 });
     }
