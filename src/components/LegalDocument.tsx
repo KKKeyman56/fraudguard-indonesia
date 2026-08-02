@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LEGAL_VERSION } from "@/lib/legal-versions";
 
 export type LegalSection = {
   title: string;
@@ -23,7 +24,7 @@ export function LegalDocument({
         <span className="eyebrow">{eyebrow}</span>
         <h1>{title}</h1>
         <p>{intro}</p>
-        <small>Berlaku sejak 30 Juli 2026 · Versi 2026-07-30</small>
+        <small>Berlaku sejak 2 Agustus 2026 · Versi {LEGAL_VERSION}</small>
       </header>
       <article className="neon-card legal-document">
         {sections.map((section) => (
@@ -42,4 +43,3 @@ export function LegalDocument({
     </main>
   );
 }
-
