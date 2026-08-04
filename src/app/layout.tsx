@@ -14,11 +14,6 @@ export const metadata: Metadata = {
   description:
     "FraudGuard membantu UMKM Indonesia menganalisis pola transaksi mencurigakan, bukti transfer palsu, risiko chargeback, dan anomali transaksi dengan insight AI yang mudah dipahami.",
   applicationName: "FraudGuard",
-  icons: {
-    icon: "/fraudguard-logo.png",
-    shortcut: "/fraudguard-logo.png",
-    apple: "/fraudguard-logo.png",
-  },
   authors: [{ name: "FraudGuard Indonesia", url: "/" }],
   creator: "FraudGuard Indonesia",
   publisher: "FraudGuard Indonesia",
