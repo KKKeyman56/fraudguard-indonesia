@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, Menu, ShieldCheck, X } from "lucide-react";
+import { LogOut, Menu, X } from "lucide-react";
 import { useState } from "react";
+import { BrandMark } from "@/components/BrandMark";
 
 const links = [
   { href: "/", label: "Beranda" },
@@ -23,7 +24,7 @@ export function AppHeader({ userEmail, isAdmin = false }: { userEmail?: string |
     <header className="site-header">
       <div className="nav-shell">
         <Link className="brand glitch" href="/" data-text="FraudGuard" aria-label="FraudGuard beranda">
-          <ShieldCheck size={24} aria-hidden="true" /> FraudGuard
+          <BrandMark priority /> FraudGuard
         </Link>
         <button className="mobile-menu" onClick={() => setOpen((value) => !value)} aria-label="Buka navigasi" aria-expanded={open}>
           {open ? <X /> : <Menu />}

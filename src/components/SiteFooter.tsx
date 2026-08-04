@@ -1,10 +1,13 @@
 import Link from "next/link";
+import { BrandMark } from "@/components/BrandMark";
 
 export function SiteFooter() {
   return (
     <footer className="site-footer">
       <div>
-        <strong>FraudGuard</strong>
+        <Link className="brand footer-brand" href="/" aria-label="FraudGuard beranda">
+          <BrandMark /> FraudGuard
+        </Link>
         <span>Alat skrining risiko transaksi untuk UMKM Indonesia.</span>
       </div>
       <nav aria-label="Informasi hukum">
@@ -17,4 +20,3 @@ export function SiteFooter() {
     </footer>
   );
 }
-

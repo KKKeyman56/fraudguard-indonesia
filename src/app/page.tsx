@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Bot, BookOpen, CheckCircle2, FileDown, FileSpreadsheet, Fingerprint, Radar, ShieldCheck, Sparkles, XCircle, Zap } from "lucide-react";
 import { PainPointSection } from "@/components/PainPointSection";
+import { BrandMark } from "@/components/BrandMark";
 import { educationArticles } from "@/lib/education-content";
 
 const features = [
@@ -168,7 +169,7 @@ export default function Home() {
       </section>
 
       <section className="cta neon-card"><Sparkles /><div><span className="eyebrow">SIAP MEMULAI?</span><h2>Periksa transaksi pertama Anda sekarang.</h2><p>Gunakan data contoh jika belum memiliki file.</p></div><Link className="button" href="/analyze">Buka FraudGuard <ArrowRight /></Link></section>
-      <footer><Link className="brand" href="/"><ShieldCheck /> FraudGuard</Link><p>AI penjaga transaksi untuk UMKM Indonesia.</p><Link href="/edukasi">Pusat Edukasi</Link><span>© 2026 FraudGuard. Hasil AI memerlukan verifikasi manusia.</span></footer>
+      <footer><Link className="brand" href="/" aria-label="FraudGuard beranda"><BrandMark /> FraudGuard</Link><p>AI penjaga transaksi untuk UMKM Indonesia.</p><Link href="/edukasi">Pusat Edukasi</Link><span>© 2026 FraudGuard. Hasil AI memerlukan verifikasi manusia.</span></footer>
     </main>
   );
 }
