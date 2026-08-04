@@ -3,17 +3,7 @@ import "server-only";
 import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { createMidtransSignature, mapMidtransPaymentStatus, type PaymentStatus } from "@/lib/payment-core";
-
-export const purchasablePlanSchema = z.enum(["pro", "enterprise"]);
-export type PurchasablePlan = z.infer<typeof purchasablePlanSchema>;
-
-export const MIDTRANS_PLANS: Record<PurchasablePlan, {
-  name: string;
-  amount: number;
-}> = {
-  pro: { name: "FraudGuard Pro - 30 hari", amount: 99_000 },
-  enterprise: { name: "FraudGuard Max - 30 hari", amount: 198_000 },
-};
+import { PAYMENT_PLANS, type PurchasablePlan } from "@/lib/payment-plans";
 
 const statusSchema = z.object({
   order_id: z.string().min(1),
@@ -65,7 +55,7 @@ export async function createSnapTransaction(input: {
   finishUrl: string;
 }) {
   const config = getMidtransConfig();
-  const selectedPlan = MIDTRANS_PLANS[input.plan];
+  const selectedPlan = PAYMENT_PLANS[input.plan];
   const response = await fetch(`${config.snapBaseUrl}/snap/v1/transactions`, {
     method: "POST",
     headers: {

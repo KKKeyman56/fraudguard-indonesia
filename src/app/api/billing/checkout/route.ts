@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getAccountStatus, getVerifiedClaims } from "@/lib/auth";
 import { LEGAL_VERSION } from "@/lib/legal-versions";
-import { createSnapTransaction, MIDTRANS_PLANS, purchasablePlanSchema } from "@/lib/midtrans";
+import { createPaymentCheckout, getPaymentProvider, PAYMENT_PLANS } from "@/lib/payment-provider";
+import { purchasablePlanSchema } from "@/lib/payment-plans";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -27,7 +28,7 @@ function trustedAppUrl(request: NextRequest) {
   return request.nextUrl.origin;
 }
 
-export async function POST(request: NextRequest) {
+async function handleCheckout(request: NextRequest) {
   const claims = await getVerifiedClaims();
   if (!claims?.sub || !claims.email) {
     return NextResponse.json({ error: "Silakan masuk untuk memilih paket." }, { status: 401 });
@@ -55,6 +56,7 @@ export async function POST(request: NextRequest) {
   }
 
   const admin = createAdminClient();
+  const provider = getPaymentProvider();
   const { data: profile, error: profileError } = await admin
     .from("profiles")
     .select("plan, plan_expires_at")
@@ -79,6 +81,7 @@ export async function POST(request: NextRequest) {
     .select("order_id, checkout_url, checkout_expires_at")
     .eq("user_id", userId)
     .eq("plan", input.data.plan)
+    .eq("provider", provider)
     .eq("status", "pending")
     .gt("checkout_expires_at", new Date().toISOString())
     .order("created_at", { ascending: false })
@@ -94,12 +97,13 @@ export async function POST(request: NextRequest) {
   }
 
   const orderId = `FG-${Date.now()}-${randomUUID().slice(0, 8)}`;
-  const amount = MIDTRANS_PLANS[input.data.plan].amount;
+  const amount = PAYMENT_PLANS[input.data.plan].amount;
   const { error: insertError } = await admin.from("payments").insert({
     order_id: orderId,
     user_id: userId,
     plan: input.data.plan,
     amount,
+    provider,
     status: "created",
     terms_version: LEGAL_VERSION,
     terms_accepted_at: new Date().toISOString(),
@@ -110,27 +114,40 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const snap = await createSnapTransaction({
+    const checkout = await createPaymentCheckout({
       orderId,
       plan: input.data.plan,
       email: String(claims.email),
-      finishUrl: `${appUrl}/billing?payment=return&orderId=${encodeURIComponent(orderId)}`,
+      appUrl,
     });
     const checkoutExpiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
     const { error: updateError } = await admin.from("payments").update({
       status: "pending",
-      checkout_url: snap.redirect_url,
+      checkout_url: checkout.redirectUrl,
       checkout_expires_at: checkoutExpiresAt,
+      provider_session_id: checkout.sessionId,
       updated_at: new Date().toISOString(),
     }).eq("order_id", orderId);
     if (updateError) throw new Error(`PAYMENT_CHECKOUT_SAVE_FAILED:${updateError.code}`);
     return NextResponse.json(
-      { redirectUrl: snap.redirect_url, orderId },
+      { redirectUrl: checkout.redirectUrl, orderId },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {
-    console.error("Snap checkout failed", error);
+    console.error(`${provider} checkout failed`, error);
     await admin.from("payments").update({ status: "failed", updated_at: new Date().toISOString() }).eq("order_id", orderId);
-    return NextResponse.json({ error: "Midtrans sedang tidak dapat dihubungi." }, { status: 502 });
+    return NextResponse.json({ error: "Penyedia pembayaran sedang tidak dapat dihubungi." }, { status: 502 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    return await handleCheckout(request);
+  } catch (error) {
+    console.error("Checkout request failed before provider response", error);
+    return NextResponse.json(
+      { error: "Konfigurasi pembayaran belum siap atau server sedang bermasalah." },
+      { status: 500, headers: { "Cache-Control": "no-store" } },
+    );
   }
 }

@@ -21,7 +21,8 @@ export function PaymentReturnStatus({ orderId }: { orderId: string }) {
         const response = await fetch(`/api/billing/status?orderId=${encodeURIComponent(orderId)}`, {
           cache: "no-store",
         });
-        const body = await response.json() as { status?: unknown };
+        const rawBody = await response.text();
+        const body = rawBody ? JSON.parse(rawBody) as { status?: unknown } : {};
         if (!response.ok || typeof body.status !== "string") throw new Error("PAYMENT_SYNC_FAILED");
         if (cancelled) return;
 
@@ -61,6 +62,6 @@ export function PaymentReturnStatus({ orderId }: { orderId: string }) {
 
   return <div className="payment-return" role="status">
     <LoaderCircle className="spin" size={19} />
-    <div><strong>{state === "checking" ? "Memeriksa pembayaran" : "Pembayaran masih diproses"}</strong><span>FraudGuard sedang mencocokkan status langsung dengan server Midtrans.</span></div>
+    <div><strong>{state === "checking" ? "Memeriksa pembayaran" : "Pembayaran masih diproses"}</strong><span>FraudGuard sedang menunggu verifikasi aman dari penyedia pembayaran.</span></div>
   </div>;
 }

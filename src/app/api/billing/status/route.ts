@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
   const admin = createAdminClient();
   const { data: ownedPayment, error } = await admin
     .from("payments")
-    .select("order_id")
+    .select("order_id, provider, status")
     .eq("order_id", orderId)
     .eq("user_id", String(claims.sub))
     .maybeSingle();
@@ -29,6 +29,15 @@ export async function GET(request: NextRequest) {
   }
   if (!ownedPayment) {
     return NextResponse.json({ error: "Pembayaran tidak ditemukan." }, { status: 404 });
+  }
+
+  // Hanya Midtrans yang memakai status polling. DOKU (dan catatan provider
+  // lama bila ada) tetap menunggu webhook tervalidasi sebagai sumber status.
+  if (ownedPayment.provider !== "midtrans") {
+    return NextResponse.json(
+      { status: ownedPayment.status },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   }
 
   try {

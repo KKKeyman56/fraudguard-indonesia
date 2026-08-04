@@ -18,7 +18,7 @@ export default function PrivacyPage() {
           "Data akun: alamat email, ID pengguna, status, peran, paket, dan waktu pendaftaran.",
           "Data transaksi yang Anda unggah: nama atau referensi pelanggan, nominal, metode, waktu, kota, catatan, dan konteks opsional.",
           "Hasil skrining: skor, status AMAN/WASPADA/RISIKO TINGGI, sinyal, penjelasan, review manusia, dan audit perubahan.",
-          "Data pembayaran: order ID, paket, nominal, status, dan referensi Midtrans. FraudGuard tidak menyimpan nomor kartu atau PIN.",
+          "Data pembayaran: order ID, paket, nominal, status, dan referensi penyedia pembayaran. FraudGuard tidak menyimpan nomor kartu atau PIN.",
           "Data teknis minimum untuk keamanan dan diagnosis, seperti request ID, waktu permintaan, dan kejadian error.",
         ],
       },
@@ -34,7 +34,7 @@ export default function PrivacyPage() {
         items: [
           "Supabase untuk autentikasi dan penyimpanan data.",
           "Vercel untuk hosting aplikasi dan fungsi server.",
-          "Midtrans untuk halaman dan verifikasi pembayaran.",
+          "DOKU sebagai penyedia utama halaman dan verifikasi pembayaran; Midtrans dapat digunakan sebagai jalur fallback operasional.",
           "Groq hanya untuk menyusun penjelasan jika aktif. Skor ditentukan Risk Engine FraudGuard; data sensitif dibatasi sebelum dikirim.",
         ],
       },
@@ -70,4 +70,3 @@ export default function PrivacyPage() {
     ]}
   />;
 }
-

@@ -13,7 +13,7 @@ Engine aktif `hybrid-v2.0.0` menghitung skor deterministik dari aturan, baseline
 - review manusia `SAFE / PROBLEM / UNKNOWN`, catatan internal, baseline bisnis, tren, dan audit log;
 - dashboard admin, manajemen pengguna, histori pengguna, evaluasi model, registry engine, dan rollback;
 - paket Gratis 50 transaksi/bulan, Pro 5.000, Max 10.000;
-- checkout Midtrans, sinkronisasi status setelah redirect, webhook tervalidasi, dan audit event pembayaran;
+- checkout DOKU, webhook tervalidasi, aktivasi paket idempoten, dan audit event pembayaran;
 - privacy policy, terms, penghapusan akun mandiri, consent saat daftar, dan consent setiap analisis;
 - rate limit global di Postgres dan reservasi kuota transaksi atomik.
 
@@ -21,11 +21,11 @@ Engine aktif `hybrid-v2.0.0` menghitung skor deterministik dari aturan, baseline
 
 - Next.js 16 App Router + React 19 di Vercel;
 - Supabase Postgres, Auth, RLS, dan service role khusus operasi server;
-- Midtrans Snap untuk pembayaran;
+- DOKU Checkout untuk pembayaran utama, dengan Midtrans sebagai fallback operasional;
 - Groq opsional dan tidak memengaruhi skor;
 - engine deterministik server-side sebagai sumber skor.
 
-`SUPABASE_SERVICE_ROLE_KEY`, `MIDTRANS_SERVER_KEY`, dan `GROQ_API_KEY` tidak boleh dikirim ke browser atau disimpan di repository.
+`SUPABASE_SERVICE_ROLE_KEY`, `DOKU_SECRET_KEY`, `MIDTRANS_SERVER_KEY`, dan `GROQ_API_KEY` tidak boleh dikirim ke browser atau disimpan di repository.
 
 ## Menjalankan lokal
 
@@ -40,8 +40,11 @@ Salin `.env.example` menjadi `.env.local`, lalu isi:
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `APP_URL`
-- `MIDTRANS_SERVER_KEY`
-- `MIDTRANS_IS_PRODUCTION=false`
+- `PAYMENT_PROVIDER=doku`
+- `DOKU_CLIENT_ID`
+- `DOKU_SECRET_KEY`
+- `DOKU_IS_PRODUCTION=false`
+- `MIDTRANS_SERVER_KEY` dan `MIDTRANS_IS_PRODUCTION` hanya jika fallback Midtrans tetap dipakai
 - `GROQ_API_KEY` dan `GROQ_MODEL` (opsional)
 
 Buka `http://localhost:3000`.
@@ -75,24 +78,29 @@ npm run pilot:labeled
 
 Lihat `pilot/README.md`. Hasil sintetis hanya membuktikan jalur teknis dan tidak membuktikan akurasi di pasar.
 
-## Midtrans Sandbox dan Production
+## DOKU Sandbox dan Production
 
 Konfigurasi Vercel:
 
-- `MIDTRANS_SERVER_KEY`: Server Key dari environment Midtrans yang dipakai;
-- `MIDTRANS_IS_PRODUCTION=false` untuk Sandbox atau `true` untuk transaksi uang sungguhan;
-- `APP_URL=https://fraudguard-indonesia.vercel.app`.
+- `PAYMENT_PROVIDER=doku`;
+- `DOKU_CLIENT_ID`: Client ID merchant DOKU;
+- `DOKU_SECRET_KEY`: Secret Key merchant DOKU, server-only;
+- `DOKU_IS_PRODUCTION=false` untuk Sandbox atau `true` untuk transaksi uang sungguhan;
+- `APP_URL=https://www.fraudguard.biz.id`.
 
-Konfigurasi Midtrans:
+Konfigurasi DOKU Back Office:
 
-- Payment Notification URL: `https://fraudguard-indonesia.vercel.app/api/billing/webhook`
-- Finish Redirect URL: `https://fraudguard-indonesia.vercel.app/billing?payment=return`
+- Notification URL: `https://www.fraudguard.biz.id/api/billing/webhook/doku`;
+- URL harus publik, HTTPS, dan tidak dilindungi login;
+- gunakan simulator DOKU Sandbox untuk mengirim notifikasi `SUCCESS` sebelum production.
 
-Paket hanya berubah setelah webhook yang signature-nya valid. Redirect browser tidak boleh mengaktifkan paket. Sandbox tidak menghasilkan pendapatan nyata; aktivasi produksi memerlukan akun merchant production dan key production.
+Paket hanya berubah setelah notifikasi dengan signature HMAC DOKU valid, invoice cocok, provider cocok, dan nominal cocok. Redirect browser tidak pernah mengaktifkan paket. Notifikasi duplikat aman karena event dan aktivasi paket bersifat idempoten. Status `FAILED` pada DOKU Checkout tidak mematikan sesi karena pelanggan masih dapat mencoba ulang atau mengganti channel.
 
-Paket Pro Rp99.000 dan Max Rp198.000 berlaku 30 hari sebagai pembayaran satu kali, bukan langganan otomatis. Setelah kembali dari Snap, browser meminta server mencocokkan status langsung ke Midtrans; webhook tetap menjadi jalur utama dan seluruh perubahan status tercatat secara idempoten.
+Paket Pro Rp99.000 dan Max Rp198.000 berlaku 30 hari sebagai pembayaran satu kali, bukan langganan otomatis. Halaman setelah pembayaran hanya membaca status yang telah diverifikasi server.
 
-Sebelum mengubah `MIDTRANS_IS_PRODUCTION=true`, pastikan merchant Midtrans telah aktif, Server Key Production sudah dipasang hanya di Vercel, Notification URL mengarah ke endpoint production, metode pembayaran production aktif, identitas usaha dan kanal dukungan pelanggan tersedia, serta satu transaksi nominal kecil sudah direkonsiliasi dari dashboard Midtrans sampai tabel `payments`.
+Jangan mengubah `DOKU_IS_PRODUCTION=true` sebelum akun dan channel DOKU production aktif, kredensial production terpasang di Vercel, serta satu transaksi kecil berhasil direkonsiliasi dari DOKU Back Office sampai tabel `payments`.
+
+Fallback lama dapat dipakai dengan `PAYMENT_PROVIDER=midtrans`, `MIDTRANS_SERVER_KEY`, dan `MIDTRANS_IS_PRODUCTION`. Endpoint webhook Midtrans tetap `https://www.fraudguard.biz.id/api/billing/webhook`.
 
 ## Verifikasi sebelum deploy
 
@@ -111,7 +119,7 @@ Uji funnel dengan akun uji terpisah:
 3. upload transaksi dengan consent;
 4. periksa hasil dan unduh PDF;
 5. simpan review manusia;
-6. checkout Midtrans Sandbox;
+6. checkout DOKU Sandbox;
 7. pastikan webhook tervalidasi dan paket berubah;
 8. pastikan data akun lain tidak dapat dibaca;
 9. uji penghapusan akun hanya pada akun khusus yang boleh dihancurkan.

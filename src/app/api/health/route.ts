@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
+import { getPaymentProvider, isPaymentProduction } from "@/lib/payment-provider";
 import { RISK_ENGINE_VERSION } from "@/lib/risk-engine";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function GET() {
+  const paymentProvider = getPaymentProvider();
   let engineVersion = RISK_ENGINE_VERSION;
   let databaseReady = false;
   try {
@@ -29,8 +31,11 @@ export async function GET() {
       process.env.NEXT_PUBLIC_SUPABASE_URL &&
       process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     ),
-    paymentConfigured: Boolean(process.env.MIDTRANS_SERVER_KEY),
-    paymentMode: process.env.MIDTRANS_IS_PRODUCTION === "true" ? "production" : "sandbox",
+    paymentConfigured: paymentProvider === "doku"
+      ? Boolean(process.env.DOKU_CLIENT_ID && process.env.DOKU_SECRET_KEY)
+      : Boolean(process.env.MIDTRANS_SERVER_KEY),
+    paymentProvider,
+    paymentMode: isPaymentProduction() ? "production" : "sandbox",
     timestamp: new Date().toISOString(),
   });
 }

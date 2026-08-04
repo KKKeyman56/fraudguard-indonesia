@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Bot, Check, Crown, Gauge, ReceiptText, ShieldCheck } from "lucide-react";
 import { getAnalysisQuota, getRecentPayments, type PaymentSummary } from "@/lib/billing-repository";
 import { requireUser } from "@/lib/auth";
-import { isMidtransProduction } from "@/lib/midtrans";
+import { getPaymentProvider, isPaymentProduction } from "@/lib/payment-provider";
 import { PLAN_DETAILS, type SubscriptionPlan } from "@/lib/plans";
 import { PaymentReturnStatus } from "@/components/PaymentReturnStatus";
 import { PurchasePlanButton } from "@/components/PurchasePlanButton";
@@ -38,7 +38,8 @@ export default async function BillingPage({
     getRecentPayments(),
     searchParams,
   ]);
-  const productionPayments = isMidtransProduction();
+  const paymentProvider = getPaymentProvider();
+  const productionPayments = isPaymentProduction();
   const percentage = quota.monthlyLimit === null ? 0 : Math.min((quota.used / quota.monthlyLimit) * 100, 100);
 
   return <main className="app-page grid-bg billing-page">
@@ -71,7 +72,7 @@ export default async function BillingPage({
     </section>
 
     <section className="neon-card payment-history">
-      <div className="section-heading compact"><div><span className="eyebrow">MIDTRANS {productionPayments ? "PRODUCTION" : "SANDBOX"}</span><h2>Riwayat pembayaran</h2></div><ReceiptText size={25} /></div>
+      <div className="section-heading compact"><div><span className="eyebrow">{paymentProvider.toUpperCase()} {productionPayments ? "PRODUCTION" : "SANDBOX"}</span><h2>Riwayat pembayaran</h2></div><ReceiptText size={25} /></div>
       {payments.length === 0
         ? <p className="payment-empty">Belum ada transaksi pembayaran di akun ini.</p>
         : <div className="payment-list">{payments.map((payment) => <article key={payment.orderId}>
@@ -81,7 +82,7 @@ export default async function BillingPage({
         </article>)}</div>}
     </section>
     <p className="billing-note">{productionPayments
-      ? "Pembayaran satu kali berlaku 30 hari dan tidak diperpanjang otomatis. Paket aktif hanya setelah pembayaran diverifikasi oleh server Midtrans."
+      ? `Pembayaran satu kali berlaku 30 hari dan tidak diperpanjang otomatis. Paket aktif hanya setelah pembayaran diverifikasi oleh server ${paymentProvider === "doku" ? "DOKU" : "Midtrans"}.`
       : "Mode Sandbox aktif: tidak ada uang sungguhan yang ditagihkan. Paket aktif hanya setelah status pembayaran terverifikasi oleh server."}</p>
     <Link className="text-link billing-back" href="/dashboard">Kembali ke dashboard</Link>
   </main>;
