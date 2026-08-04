@@ -6,10 +6,10 @@ import { getVerifiedClaims } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Masuk atau Daftar" };
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string; password_reset?: string; auth_error?: string }> }) {
   const claims = await getVerifiedClaims();
   if (claims) redirect("/dashboard");
-  const { next = "/dashboard" } = await searchParams;
+  const { next = "/dashboard", password_reset, auth_error } = await searchParams;
 
   return (
     <main className="auth-page grid-bg">
@@ -24,6 +24,8 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <span className="eyebrow">FRAUDGUARD ACCOUNT</span>
         <h2>Masuk atau buat akun</h2>
         <p>Satu akun untuk dashboard, analisis AI, dan laporan transaksi.</p>
+        {password_reset === "success" && <p className="auth-message success" role="status">Kata sandi berhasil diperbarui. Silakan masuk kembali.</p>}
+        {auth_error === "recovery_link_invalid" && <p className="auth-message error" role="alert">Tautan pemulihan tidak valid atau sudah kedaluwarsa. Minta tautan baru.</p>}
         <AuthForm next={next} />
       </section>
     </main>

@@ -62,6 +62,7 @@ export function AuthForm({ next }: { next: string }) {
       {state.success && <p className="auth-message success" role="status">{state.success}</p>}
       <form key={mode} action={mode === "login" ? loginAction : signupAction} className="auth-form">
         <Fields next={next} mode={mode} />
+        {mode === "login" && <a className="text-link auth-forgot-link" href="/forgot-password">Lupa kata sandi?</a>}
         <SubmitButton mode={mode} />
       </form>
       <p className="auth-note">FraudGuard memberi rekomendasi skrining risiko. Keputusan final tetap di tangan Anda.</p>

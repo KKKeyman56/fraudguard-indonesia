@@ -24,7 +24,20 @@ function isRateLimited(userId: string) {
 
 function trustedAppUrl(request: NextRequest) {
   const configured = process.env.APP_URL?.trim();
-  if (configured) return new URL(configured).origin;
+  if (configured) {
+    const normalized = configured.startsWith("//")
+      ? `https:${configured}`
+      : /^https?:\/\//i.test(configured)
+        ? configured
+        : `https://${configured}`;
+
+    try {
+      const url = new URL(normalized);
+      if (url.protocol === "https:" || url.protocol === "http:") return url.origin;
+    } catch {
+      console.error("APP_URL is invalid; using the request origin instead.");
+    }
+  }
   return request.nextUrl.origin;
 }
 
