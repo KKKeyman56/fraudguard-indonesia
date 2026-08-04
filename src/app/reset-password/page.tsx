@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
 import { PasswordRecoveryForm } from "@/components/PasswordRecoveryForm";
@@ -7,8 +8,10 @@ import { getVerifiedClaims } from "@/lib/auth";
 export const metadata: Metadata = { title: "Buat Kata Sandi Baru" };
 
 export default async function ResetPasswordPage() {
+  const cookieStore = await cookies();
+  const recoveryActive = cookieStore.get("fraudguard_password_recovery")?.value === "active";
   const claims = await getVerifiedClaims();
-  if (!claims) redirect("/login?auth_error=recovery_link_invalid");
+  if (!claims || !recoveryActive) redirect("/login?auth_error=recovery_link_invalid");
 
   return (
     <main className="auth-page grid-bg">

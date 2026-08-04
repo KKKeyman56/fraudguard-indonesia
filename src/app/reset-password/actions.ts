@@ -1,5 +1,6 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
@@ -24,6 +25,11 @@ export async function updateRecoveredPassword(
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
 
+  const cookieStore = await cookies();
+  if (cookieStore.get("fraudguard_password_recovery")?.value !== "active") {
+    return { error: "Sesi pemulihan tidak valid. Minta tautan baru." };
+  }
+
   const supabase = await createClient();
   const { data: claimsData, error: claimsError } = await supabase.auth.getClaims();
   if (claimsError || !claimsData?.claims?.sub) {
@@ -40,5 +46,6 @@ export async function updateRecoveredPassword(
   }
 
   await supabase.auth.signOut();
+  cookieStore.delete("fraudguard_password_recovery");
   redirect("/login?password_reset=success");
 }
