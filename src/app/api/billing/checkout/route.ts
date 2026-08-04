@@ -41,6 +41,20 @@ function trustedAppUrl(request: NextRequest) {
   return request.nextUrl.origin;
 }
 
+function isSameOriginRequest(request: NextRequest) {
+  const origin = request.headers.get("origin");
+  if (!origin) return true;
+
+  try {
+    const originUrl = new URL(origin);
+    const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+    const requestHost = forwardedHost || request.headers.get("host") || request.nextUrl.host;
+    return originUrl.host === requestHost;
+  } catch {
+    return false;
+  }
+}
+
 async function handleCheckout(request: NextRequest) {
   const claims = await getVerifiedClaims();
   if (!claims?.sub || !claims.email) {
@@ -54,9 +68,8 @@ async function handleCheckout(request: NextRequest) {
     return NextResponse.json({ error: "Terlalu banyak percobaan pembayaran. Coba lagi satu menit lagi." }, { status: 429 });
   }
 
-  const origin = request.headers.get("origin");
   const appUrl = trustedAppUrl(request);
-  if (origin && origin !== appUrl) {
+  if (!isSameOriginRequest(request)) {
     return NextResponse.json({ error: "Permintaan pembayaran tidak valid." }, { status: 403 });
   }
 
