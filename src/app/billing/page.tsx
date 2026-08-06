@@ -27,6 +27,15 @@ const paymentLabels: Record<PaymentSummary["status"], string> = {
   refunded: "DIKEMBALIKAN",
 };
 
+function paymentLabel(payment: PaymentSummary) {
+  if (payment.provider !== "manual_bank") return paymentLabels[payment.status];
+  if (payment.manualReviewStatus === "awaiting_proof") return "MENUNGGU BUKTI";
+  if (payment.manualReviewStatus === "pending_review") return "DIPERIKSA ADMIN";
+  if (payment.manualReviewStatus === "approved") return "BERHASIL";
+  if (payment.manualReviewStatus === "rejected") return "DITOLAK";
+  return paymentLabels[payment.status];
+}
+
 export default async function BillingPage({
   searchParams,
 }: {
@@ -78,11 +87,13 @@ export default async function BillingPage({
         : <div className="payment-list">{payments.map((payment) => <article key={payment.orderId}>
           <div><strong>{PLAN_DETAILS[payment.plan].name}</strong><small>{payment.orderId} · {new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Jakarta" }).format(new Date(payment.createdAt))} WIB</small></div>
           <b>{new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(payment.amount)}</b>
-          <span className={`payment-status ${payment.status}`}>{paymentLabels[payment.status]}</span>
+          <span className={`payment-status ${payment.status}`}>{paymentLabel(payment)}</span>
         </article>)}</div>}
     </section>
     <p className="billing-note">{productionPayments
-      ? `Pembayaran satu kali berlaku 30 hari dan tidak diperpanjang otomatis. Paket aktif hanya setelah pembayaran diverifikasi oleh server ${paymentProvider === "doku" ? "DOKU" : "Midtrans"}.`
+      ? paymentProvider === "manual_bank"
+        ? "Pembayaran dilakukan melalui transfer bank. Paket aktif setelah bukti transfer diperiksa dan disetujui admin FraudGuard."
+        : `Pembayaran satu kali berlaku 30 hari dan tidak diperpanjang otomatis. Paket aktif hanya setelah pembayaran diverifikasi oleh server ${paymentProvider === "doku" ? "DOKU" : "Midtrans"}.`
       : "Mode Sandbox aktif: tidak ada uang sungguhan yang ditagihkan. Paket aktif hanya setelah status pembayaran terverifikasi oleh server."}</p>
     <Link className="text-link billing-back" href="/dashboard">Kembali ke dashboard</Link>
   </main>;

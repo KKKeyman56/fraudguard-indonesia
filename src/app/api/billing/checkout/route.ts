@@ -131,6 +131,7 @@ async function handleCheckout(request: NextRequest) {
     amount,
     provider,
     status: "created",
+    manual_review_status: provider === "manual_bank" ? "awaiting_proof" : null,
     terms_version: LEGAL_VERSION,
     terms_accepted_at: new Date().toISOString(),
   });
@@ -146,7 +147,7 @@ async function handleCheckout(request: NextRequest) {
       email: String(claims.email),
       appUrl,
     });
-    const checkoutExpiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    const checkoutExpiresAt = new Date(Date.now() + (provider === "manual_bank" ? 24 : 1) * 60 * 60 * 1000).toISOString();
     const { error: updateError } = await admin.from("payments").update({
       status: "pending",
       checkout_url: checkout.redirectUrl,
@@ -162,7 +163,11 @@ async function handleCheckout(request: NextRequest) {
   } catch (error) {
     console.error(`${provider} checkout failed`, error);
     await admin.from("payments").update({ status: "failed", updated_at: new Date().toISOString() }).eq("order_id", orderId);
-    return NextResponse.json({ error: "Penyedia pembayaran sedang tidak dapat dihubungi." }, { status: 502 });
+    return NextResponse.json({
+      error: provider === "manual_bank"
+        ? "Informasi rekening pembayaran belum dikonfigurasi."
+        : "Penyedia pembayaran sedang tidak dapat dihubungi.",
+    }, { status: provider === "manual_bank" ? 503 : 502 });
   }
 }
 

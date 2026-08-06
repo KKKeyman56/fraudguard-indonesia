@@ -13,7 +13,7 @@ Engine aktif `hybrid-v2.0.0` menghitung skor deterministik dari aturan, baseline
 - review manusia `SAFE / PROBLEM / UNKNOWN`, catatan internal, baseline bisnis, tren, dan audit log;
 - dashboard admin, manajemen pengguna, histori pengguna, evaluasi model, registry engine, dan rollback;
 - paket Gratis 50 transaksi/bulan, Pro 5.000, Max 10.000;
-- checkout DOKU, webhook tervalidasi, aktivasi paket idempoten, dan audit event pembayaran;
+- transfer bank manual, bukti pembayaran privat, verifikasi admin, aktivasi paket transaksional, dan audit pembayaran;
 - privacy policy, terms, penghapusan akun mandiri, consent saat daftar, dan consent setiap analisis;
 - rate limit global di Postgres dan reservasi kuota transaksi atomik.
 
@@ -21,11 +21,11 @@ Engine aktif `hybrid-v2.0.0` menghitung skor deterministik dari aturan, baseline
 
 - Next.js 16 App Router + React 19 di Vercel;
 - Supabase Postgres, Auth, RLS, dan service role khusus operasi server;
-- DOKU Checkout untuk pembayaran utama, dengan Midtrans sebagai fallback operasional;
+- transfer bank manual sebagai pembayaran paid beta; integrasi DOKU/Midtrans tetap tersedia sebagai kode legacy opsional;
 - Groq opsional dan tidak memengaruhi skor;
 - engine deterministik server-side sebagai sumber skor.
 
-`SUPABASE_SERVICE_ROLE_KEY`, `DOKU_SECRET_KEY`, `MIDTRANS_SERVER_KEY`, dan `GROQ_API_KEY` tidak boleh dikirim ke browser atau disimpan di repository.
+`SUPABASE_SERVICE_ROLE_KEY`, data rekening, secret payment gateway, dan `GROQ_API_KEY` tidak boleh dikirim ke browser atau disimpan di repository.
 
 ## Menjalankan lokal
 
@@ -40,10 +40,10 @@ Salin `.env.example` menjadi `.env.local`, lalu isi:
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `APP_URL`
-- `PAYMENT_PROVIDER=doku`
-- `DOKU_CLIENT_ID`
-- `DOKU_SECRET_KEY`
-- `DOKU_IS_PRODUCTION=false`
+- `PAYMENT_PROVIDER=manual_bank`
+- `MANUAL_PAYMENT_BANK_NAME`
+- `MANUAL_PAYMENT_ACCOUNT_NUMBER`
+- `MANUAL_PAYMENT_ACCOUNT_HOLDER`
 - `MIDTRANS_SERVER_KEY` dan `MIDTRANS_IS_PRODUCTION` hanya jika fallback Midtrans tetap dipakai
 - `GROQ_API_KEY` dan `GROQ_MODEL` (opsional)
 
@@ -78,7 +78,21 @@ npm run pilot:labeled
 
 Lihat `pilot/README.md`. Hasil sintetis hanya membuktikan jalur teknis dan tidak membuktikan akurasi di pasar.
 
-## DOKU Sandbox dan Production
+## Transfer bank manual
+
+Konfigurasi Vercel:
+
+- `PAYMENT_PROVIDER=manual_bank`;
+- `MANUAL_PAYMENT_BANK_NAME`: nama bank tujuan;
+- `MANUAL_PAYMENT_ACCOUNT_NUMBER`: nomor rekening tujuan;
+- `MANUAL_PAYMENT_ACCOUNT_HOLDER`: nama pemilik rekening;
+- `APP_URL=https://www.fraudguard.biz.id`.
+
+Terapkan migration `20260806150000_add_manual_bank_payments.sql`. Migration ini menyiapkan bucket privat `payment-proofs`, status review, dan RPC transaksional untuk aktivasi paket. Pengguna mentransfer sesuai nominal lalu mengunggah JPG, PNG, atau PDF maksimal 5 MB. Admin membuka `/admin/payments`, mencocokkan bukti dengan mutasi rekening, kemudian menyetujui atau menolak. Redirect browser dan upload bukti tidak pernah mengaktifkan paket; aktivasi hanya terjadi saat admin yang valid menyetujui pembayaran.
+
+Jangan menaruh nomor rekening di source code. Pastikan rekening yang dipakai diizinkan untuk menerima pembayaran usaha, lakukan rekonsiliasi rutin, dan simpan bukti administrasi yang diperlukan.
+
+## Gateway opsional (legacy)
 
 Konfigurasi Vercel:
 
@@ -119,8 +133,8 @@ Uji funnel dengan akun uji terpisah:
 3. upload transaksi dengan consent;
 4. periksa hasil dan unduh PDF;
 5. simpan review manusia;
-6. checkout DOKU Sandbox;
-7. pastikan webhook tervalidasi dan paket berubah;
+6. buat pesanan transfer manual dan unggah bukti pembayaran;
+7. verifikasi bukti melalui `/admin/payments` dan pastikan paket berubah;
 8. pastikan data akun lain tidak dapat dibaca;
 9. uji penghapusan akun hanya pada akun khusus yang boleh dihancurkan.
 

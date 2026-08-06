@@ -4,14 +4,27 @@ import { createDokuTransaction, isDokuProduction } from "@/lib/doku";
 import { createSnapTransaction, isMidtransProduction } from "@/lib/midtrans";
 import { PAYMENT_PLANS, type PurchasablePlan } from "@/lib/payment-plans";
 
-export type PaymentProvider = "doku" | "midtrans";
+export type PaymentProvider = "manual_bank" | "doku" | "midtrans";
 
 export function getPaymentProvider(): PaymentProvider {
-  return process.env.PAYMENT_PROVIDER === "midtrans" ? "midtrans" : "doku";
+  if (process.env.PAYMENT_PROVIDER === "midtrans") return "midtrans";
+  if (process.env.PAYMENT_PROVIDER === "doku") return "doku";
+  return "manual_bank";
 }
 
 export function isPaymentProduction() {
-  return getPaymentProvider() === "doku" ? isDokuProduction() : isMidtransProduction();
+  const provider = getPaymentProvider();
+  if (provider === "doku") return isDokuProduction();
+  if (provider === "midtrans") return isMidtransProduction();
+  return true;
+}
+
+export function isManualBankConfigured() {
+  return Boolean(
+    process.env.MANUAL_PAYMENT_BANK_NAME?.trim() &&
+    process.env.MANUAL_PAYMENT_ACCOUNT_NUMBER?.trim() &&
+    process.env.MANUAL_PAYMENT_ACCOUNT_HOLDER?.trim(),
+  );
 }
 
 export async function createPaymentCheckout(input: {
@@ -22,6 +35,14 @@ export async function createPaymentCheckout(input: {
 }) {
   const provider = getPaymentProvider();
   const returnUrl = `${input.appUrl}/billing?payment=return&orderId=${encodeURIComponent(input.orderId)}`;
+  if (provider === "manual_bank") {
+    if (!isManualBankConfigured()) throw new Error("MANUAL_BANK_CONFIG_MISSING");
+    return {
+      provider,
+      redirectUrl: `${input.appUrl}/billing/manual/${encodeURIComponent(input.orderId)}`,
+      sessionId: null,
+    };
+  }
   if (provider === "midtrans") {
     const snap = await createSnapTransaction({
       orderId: input.orderId,

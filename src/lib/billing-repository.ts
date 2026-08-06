@@ -26,6 +26,8 @@ export type PaymentSummary = {
   status: "created" | "pending" | "paid" | "denied" | "cancelled" | "expired" | "failed" | "refunded";
   createdAt: string;
   paidAt: string | null;
+  provider: "manual_bank" | "doku" | "midtrans" | "ipaymu";
+  manualReviewStatus: "awaiting_proof" | "pending_review" | "approved" | "rejected" | null;
 };
 
 export async function getAnalysisQuota(): Promise<AnalysisQuota> {
@@ -79,7 +81,7 @@ export async function getRecentPayments(): Promise<PaymentSummary[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("payments")
-    .select("order_id, plan, amount, status, created_at, paid_at")
+    .select("order_id, plan, amount, status, created_at, paid_at, provider, manual_review_status")
     .order("created_at", { ascending: false })
     .limit(5);
   if (error) throw new Error(`PAYMENTS_READ_FAILED:${error.code}`);
@@ -97,6 +99,8 @@ export async function getRecentPayments(): Promise<PaymentSummary[]> {
       status: row.status as PaymentSummary["status"],
       createdAt: String(row.created_at),
       paidAt: row.paid_at ? String(row.paid_at) : null,
+      provider: row.provider as PaymentSummary["provider"],
+      manualReviewStatus: row.manual_review_status as PaymentSummary["manualReviewStatus"],
     }];
   });
 }

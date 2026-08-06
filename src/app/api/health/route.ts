@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getPaymentProvider, isPaymentProduction } from "@/lib/payment-provider";
+import { getPaymentProvider, isManualBankConfigured, isPaymentProduction } from "@/lib/payment-provider";
 import { RISK_ENGINE_VERSION } from "@/lib/risk-engine";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -31,9 +31,11 @@ export async function GET() {
       process.env.NEXT_PUBLIC_SUPABASE_URL &&
       process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     ),
-    paymentConfigured: paymentProvider === "doku"
-      ? Boolean(process.env.DOKU_CLIENT_ID && process.env.DOKU_SECRET_KEY)
-      : Boolean(process.env.MIDTRANS_SERVER_KEY),
+    paymentConfigured: paymentProvider === "manual_bank"
+      ? isManualBankConfigured()
+      : paymentProvider === "doku"
+        ? Boolean(process.env.DOKU_CLIENT_ID && process.env.DOKU_SECRET_KEY)
+        : Boolean(process.env.MIDTRANS_SERVER_KEY),
     paymentProvider,
     paymentMode: isPaymentProduction() ? "production" : "sandbox",
     timestamp: new Date().toISOString(),
