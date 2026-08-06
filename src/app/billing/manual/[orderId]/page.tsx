@@ -39,10 +39,10 @@ export default async function ManualPaymentPage({ params }: { params: Promise<{ 
       <article className="neon-card manual-bank-card">
         <div className="admin-section-title"><div><span className="eyebrow">REKENING TUJUAN</span><h2>{bankName}</h2></div><Building2 size={27} /></div>
         <dl className="manual-bank-details">
-          <div><dt>Nomor rekening</dt><dd>{accountNumber}</dd></div>
-          <div><dt>Atas nama</dt><dd>{accountHolder}</dd></div>
-          <div><dt>Nominal transfer</dt><dd>{new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(amount)}</dd></div>
-          <div><dt>ID pesanan</dt><dd>{payment.order_id}</dd></div>
+          <div><dt>Nomor rekening</dt><dd className="manual-bank-nowrap">{accountNumber}</dd></div>
+          <div><dt>Nominal transfer</dt><dd className="manual-bank-nowrap">{new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(amount)}</dd></div>
+          <div className="manual-bank-wide"><dt>Atas nama</dt><dd>{accountHolder}</dd></div>
+          <div className="manual-bank-wide"><dt>ID pesanan</dt><dd className="manual-bank-order-id">{payment.order_id}</dd></div>
         </dl>
         <p className="manual-payment-warning"><CircleAlert size={17} /> Pastikan rekening tujuan dan nominal benar sebelum mengirim uang.</p>
       </article>
